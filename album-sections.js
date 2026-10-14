@@ -8,17 +8,80 @@ function cards(){return [...$('#pl-photo-grid').querySelectorAll('.pl-photo-card
 function photos(){return cards().map(c=>({el:c,id:c.querySelector('[data-preview]')?.dataset.preview})).filter(x=>x.id)}
 async function sectionsMap(){return await rpc('pl_demo_album_section_members',{p_album_id:albumId})}
 let mapping=[];
+
+let sectionMenu=null;
+function closeSectionMenu(){
+  if(!sectionMenu)return;
+  sectionMenu.trigger?.setAttribute('aria-expanded','false');
+  sectionMenu.element.remove();
+  sectionMenu=null;
+}
+function openSectionMenu(trigger,sectionId){
+  if(sectionMenu){const already=sectionMenu.trigger===trigger;closeSectionMenu();if(already)return}
+  const section=sections.find(x=>x.id===sectionId);
+  if(!section)return;
+  const el=document.createElement('div');
+  el.className='pl-section-popover';
+  el.id='pl-section-popover';
+  el.setAttribute('role','menu');
+  el.setAttribute('aria-label','Opções da seção '+section.nome);
+  el.innerHTML='<button type="button" role="menuitem" data-section-command="rename"><span aria-hidden="true">✎</span> Renomear</button>'+
+    '<button type="button" role="menuitem" data-section-command="delete"><span aria-hidden="true">♲</span> Excluir seção</button>';
+  const rect=trigger.getBoundingClientRect();
+  const left=Math.max(10,Math.min(window.innerWidth-202,rect.right-194));
+  const top=rect.bottom+112>window.innerHeight?Math.max(10,rect.top-114):rect.bottom+8;
+  el.style.left=Math.max(10,left)+'px';
+  el.style.top=top+'px';
+  el.addEventListener('click',e=>{
+    const command=e.target.closest('[data-section-command]')?.dataset.sectionCommand;
+    if(!command)return;
+    closeSectionMenu();
+    if(command==='rename'){
+      const nome=prompt('Nome da seção',section.nome);
+      if(nome?.trim())act('rename',{id:sectionId,nome:nome.trim()});
+    }else if(command==='delete'){
+      if(confirm('Excluir a seção? As fotografias voltarão para Sem seção.')){
+        active='none';
+        act('delete',{id:sectionId});
+      }
+    }
+  });
+  document.body.appendChild(el);
+  trigger.setAttribute('aria-expanded','true');
+  sectionMenu={element:el,trigger};
+}
+document.addEventListener('pointerdown',event=>{
+  if(sectionMenu&&!sectionMenu.element.contains(event.target)&&event.target!==sectionMenu.trigger)closeSectionMenu();
+},true);
+document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSectionMenu()});
+window.addEventListener('resize',closeSectionMenu);
+
 async function render(){const grid=$('#pl-photo-grid');if(!grid)return;
 try{mapping=await sectionsMap()}catch(e){console.warn('Organização indisponível:',e);return}
 const map=new Map(mapping.map(x=>[x.fotografia_id,x]));const previous=$('#pl-section-controls');previous?.remove();
-const panel=document.createElement('div');panel.id='pl-section-controls';panel.innerHTML='<div class="pl-sections">'+[{id:'all',nome:'Todas'},{id:'none',nome:'Sem seção'},...sections].map(s=>'<button data-section="'+esc(s.id)+'" class="'+(active===s.id?'current':'')+'">'+esc(s.nome)+'</button>').join('')+'<button id="pl-section-add">＋ Nova seção</button></div><div class="pl-bulk"><button id="pl-bulk-mode">'+(mode?'Cancelar seleção':'Selecionar fotos')+'</button><button id="pl-order-mode">'+(reorder?'Concluir organização':'Reorganizar fotos')+'</button>'+(selected.size?'<strong>'+selected.size+' selecionadas</strong><select id="pl-bulk-move"><option value="">Mover para…</option><option value="none">Sem seção</option>'+sections.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.nome)+'</option>').join('')+'</select>':'')+(active!=='all'&&active!=='none'?'<button id="pl-section-rename">Renomear</button><button id="pl-section-remove">Excluir seção</button>':'')+'</div>';
+closeSectionMenu();
+const panel=document.createElement('div');
+panel.id='pl-section-controls';
+const sectionButtons=[{id:'all',nome:'Todas'},{id:'none',nome:'Sem seção'},...sections].map(sec=>{
+  const isCurrent=active===sec.id;
+  const editable=isCurrent&&sec.id!=='all'&&sec.id!=='none';
+  return '<span class="pl-section-item'+(isCurrent?' current':'')+'">'+
+    '<button type="button" class="pl-section-tab" data-section="'+esc(sec.id)+'">'+esc(sec.nome)+'</button>'+
+    (editable?'<button type="button" class="pl-section-more" aria-label="Opções da seção '+esc(sec.nome)+'" aria-haspopup="menu" aria-expanded="false" title="Renomear ou excluir seção">⋮</button>':'')+
+    '</span>';
+}).join('');
+panel.innerHTML='<div class="pl-sections" aria-label="Seções do álbum">'+sectionButtons+
+  '<button type="button" id="pl-section-add">＋ Nova seção</button></div>'+
+  '<div class="pl-bulk"><button id="pl-bulk-mode">'+(mode?'Cancelar seleção':'Selecionar fotos')+
+  '</button><button id="pl-order-mode">'+(reorder?'Concluir organização':'Reorganizar fotos')+
+  '</button>'+(selected.size?'<strong>'+selected.size+' selecionadas</strong><select id="pl-bulk-move"><option value="">Mover para…</option><option value="none">Sem seção</option>'+
+  sections.map(sec=>'<option value="'+esc(sec.id)+'">'+esc(sec.nome)+'</option>').join('')+'</select>':'')+'</div>';
 grid.before(panel);
 panel.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{active=b.dataset.section;selected.clear();mode=false;render()});
 $('#pl-section-add').onclick=()=>{const nome=prompt('Nome da seção');if(nome?.trim())act('create',{nome:nome.trim()})};
 $('#pl-bulk-mode').onclick=()=>{mode=!mode;reorder=false;selected.clear();render()};$('#pl-order-mode').onclick=()=>{reorder=!reorder;mode=false;selected.clear();render()};
 $('#pl-bulk-move')?.addEventListener('change',async e=>{if(e.target.value){await act('move',{ids:[...selected],secao_id:e.target.value==='none'?null:e.target.value});selected.clear();mode=false;render()}});
-$('#pl-section-rename')?.addEventListener('click',()=>{const s=sections.find(x=>x.id===active),nome=prompt('Nome da seção',s?.nome);if(nome?.trim())act('rename',{id:active,nome:nome.trim()})});
-$('#pl-section-remove')?.addEventListener('click',()=>{if(confirm('Excluir a seção? As fotografias voltarão para Sem seção.')){const id=active;active='none';act('delete',{id})}});
+panel.querySelector('.pl-section-more')?.addEventListener('click',e=>{e.stopPropagation();openSectionMenu(e.currentTarget,active)});
 
 for(const {el,id} of photos()){
   const info=map.get(id);
