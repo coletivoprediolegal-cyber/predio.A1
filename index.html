@@ -153,7 +153,7 @@ const titulo=prompt('Título do novo álbum');if(titulo===null)return;
 if(titulo.trim().length<3)return alert('Informe um título com pelo menos três caracteres.');
 const hoje=new Date().toISOString().slice(0,10);
 const data=prompt('Data da vistoria (AAAA-MM-DD)',hoje);if(data===null)return;
-if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(data)||Number.isNaN(Date.parse(data)))return alert('Informe uma data válida no formato AAAA-MM-DD.');
+if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(data)||Number.isNaN(Date.parse(data)))return alert('Informe uma data válida no formato AAAA-MM-DD.');
 const assunto=prompt('Assunto (opcional)','');if(assunto===null)return;
 const {data:albumId,error}=await window.plSupabase.rpc('pl_demo_album_create',{p_job_id:jobId,p_titulo:titulo.trim(),p_data:data,p_assunto:assunto.trim()});
 if(error||!albumId)return alert('Não foi possível criar o álbum.');
@@ -164,7 +164,7 @@ async function linkPhotoToJob(f){
 const current=albumFotos.find(x=>x.id===f);if(!current)return;
 const options=directory.flatMap(c=>(c.jobs||[]).map(j=>({id:j.id,label:c.nome+' — '+j.titulo}))).filter(j=>!(current.jobs||[]).some(x=>x.id===j.id));
 if(!options.length)return alert('Não há outros jobs disponíveis.');
-const choice=prompt('Vincular a outro job. Digite o número:\\n'+options.map((j,i)=>(i+1)+'. '+j.label).join('\\n'));
+const choice=prompt('Vincular a outro job. Digite o número:'+String.fromCharCode(10)+options.map((j,i)=>(i+1)+'. '+j.label).join(String.fromCharCode(10)));
 if(choice===null)return;const ix=Number(choice)-1;
 if(!Number.isInteger(ix)||ix<0||ix>=options.length)return alert('Seleção inválida.');
 const {data,error}=await window.plSupabase.rpc('pl_demo_photo_link',{p_album_id:albumAtual,p_foto_id:f,p_job_id:options[ix].id});
