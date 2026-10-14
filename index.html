@@ -245,4 +245,13 @@ document.querySelector('header .profile')?.addEventListener('click',()=>{switchT
 window.addEventListener('popstate',()=>switchTo('home'));
 load();
 })();
-</script><link rel="stylesheet" href="report.css"><script src="report-core.js"></script><script src="assets/jspdf.umd.min.js"></script><script src="report.js"></script></body></html>
+</script><link rel="stylesheet" href="report.css"><script src="report-core.js"></script><script src="assets/jspdf.umd.min.js"></script><script src="report.js"></script><style>
+.pl-sections{display:flex;gap:7px;overflow-x:auto;padding:10px 0;scrollbar-width:thin}
+.pl-sections button{flex:none;border:1px solid #dcd2c3;border-radius:20px;background:#fffaf5;color:#26354b;padding:9px 12px;font:12px 'Instrument Sans',sans-serif}
+.pl-sections button.current{background:#26354b;color:white}
+.pl-bulk{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:3px 0 12px}
+.pl-bulk button,.pl-bulk select{background:#fffaf5;border:1px solid #dcd2c3;color:#26354b;border-radius:15px;padding:9px;font:12px 'Instrument Sans',sans-serif}
+.pl-photo-card.pl-selected{outline:3px solid #24477c;outline-offset:-3px}
+.pl-photo-card.pl-selected .pl-photo-preview:after{content:'✓';position:absolute;top:5px;left:5px;border-radius:50%;width:22px;height:22px;background:#24477c;color:white;display:grid;place-items:center}
+.pl-photo-card[hidden]{display:none!important}
+</style><script src="album-sections.js" defer></script></body></html>
