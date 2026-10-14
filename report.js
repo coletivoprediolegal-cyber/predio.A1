@@ -162,49 +162,102 @@
   const included=new Set(items.map(i=>i.fotografia_id));
   state.items=items.map(i=>({...originals.get(i.fotografia_id),...i})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=report.fotos_por_pagina;dirty=false;render();
  }catch(e){error(e)}finally{busy=false}}
- async function exportPDF(){if(busy)return;busy=true;const generation=revision;let print;try{
-  if(!state.items.some(i=>i.incluir))throw new Error('Selecione ao menos uma fotografia.');
-  error({message:'Gerando PDF A4 em 300 dpi…'});
-  dialog.inert=true;
-  print=document.createElement('div');print.style.cssText='position:fixed;left:-10000px;top:0;pointer-events:none';print.innerHTML=sheets();document.body.append(print);
-  for(const img of print.querySelectorAll('img'))img.crossOrigin=img.src.startsWith('https:')?'anonymous':null;
-  await Promise.all([...print.querySelectorAll('img')].map(img=>img.decode()));await document.fonts.ready;
-  if(generation!==revision)return;
-  const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
-  const pages=[...print.querySelectorAll('.rf-sheet')];
-  for(let ix=0;ix<pages.length;ix++){
-   const sheet=pages[ix],rect=sheet.getBoundingClientRect();
-   if([...sheet.querySelectorAll('.rf-cell img')].some(img=>img.getBoundingClientRect().height<38))throw new Error('Legenda extensa demais para este layout. Reduza o texto ou escolha menos fotos por página.');
-   const canvas=document.createElement('canvas');canvas.width=2480;canvas.height=3508;const ctx=canvas.getContext('2d');
-   const scale=canvas.width/rect.width;
-   ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
-   ctx.drawImage(sheet.querySelector('.rf-lauda'),0,0,canvas.width,canvas.height);
-   for(const cell of sheet.querySelectorAll('.rf-cell')){
-    const r=cell.getBoundingClientRect();ctx.strokeStyle='#d8d5cf';ctx.lineWidth=scale;ctx.strokeRect((r.x-rect.x)*scale,(r.y-rect.y)*scale,r.width*scale,r.height*scale);
-    const img=cell.querySelector('img'),ir=img.getBoundingClientRect();const ratio=Math.min(ir.width/img.naturalWidth,ir.height/img.naturalHeight);
-    const w=img.naturalWidth*ratio,h=img.naturalHeight*ratio;
-    ctx.drawImage(img,(ir.x-rect.x+(ir.width-w)/2)*scale,(ir.y-rect.y+(ir.height-h)/2)*scale,w*scale,h*scale);
+ async function exportPDF(){
+  if(busy)return;
+  busy=true;const generation=revision;let print;
+  try{
+   if(!state.items.some(i=>i.incluir))throw new Error('Nenhuma fotografia disponível para o relatório.');
+   error({message:'Gerando PDF A4 sobre a lauda institucional…'});
+   dialog.inert=true;
+   print=document.createElement('div');
+   print.style.cssText='position:fixed;left:-12000px;top:0;width:210mm;pointer-events:none;z-index:-1';
+   print.innerHTML=sheets();document.body.append(print);
+   for(const img of print.querySelectorAll('img')){
+    if(img.src.startsWith('https:'))img.crossOrigin='anonymous';
    }
-   for(const el of sheet.querySelectorAll('.rf-heading,.rf-subtitle,figcaption,.rf-page-number')){
-    const style=getComputedStyle(el),r=el.getBoundingClientRect(),font=parseFloat(style.fontSize),line=parseFloat(style.lineHeight)||font*1.25;
-    ctx.font=style.fontWeight+' '+font*scale+'px Arial';ctx.fillStyle='#102044';ctx.textBaseline='top';
-    const padding=parseFloat(style.paddingTop)||0,maxWidth=r.width*scale;let y=(r.y-rect.y+padding)*scale;
-    const lines=[];
-    for(const paragraph of el.innerText.split('\n')){
-     let current='';for(const word of paragraph.split(/\s+/)){
-      if(ctx.measureText(current+(current?' ':'')+word).width<=maxWidth){current+=(current?' ':'')+word;continue}
-      if(current){lines.push(current);current=''}
-      for(const letter of word){if(ctx.measureText(current+letter).width>maxWidth){lines.push(current);current=''}current+=letter}
-     }lines.push(current);
+   await Promise.all([...print.querySelectorAll('img')].map(img=>img.decode()));
+   await document.fonts.ready;
+   if(generation!==revision)return;
+   const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+   const pages=[...print.querySelectorAll('.rf-sheet')];
+   for(let pageIndex=0;pageIndex<pages.length;pageIndex++){
+    const sheet=pages[pageIndex],rect=sheet.getBoundingClientRect();
+    const canvas=document.createElement('canvas');
+    canvas.width=2480;canvas.height=3508;
+    const ctx=canvas.getContext('2d',{alpha:false});
+    const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+    const pos=el=>{const r=el.getBoundingClientRect();return {x:(r.x-rect.x)*sx,y:(r.y-rect.y)*sy,w:r.width*sx,h:r.height*sy}};
+    const rounded=(x,y,w,h,r=10)=>{
+      ctx.beginPath();ctx.roundRect(x,y,w,h,Math.min(r,w/3,h/3));ctx.closePath();
+    };
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(sheet.querySelector('.rf-lauda'),0,0,canvas.width,canvas.height);
+    const write=(el,color,fontWeight=400,align='left')=>{
+     if(!el||!el.textContent.trim())return;
+     const p=pos(el),st=getComputedStyle(el),font=Math.max(8,parseFloat(st.fontSize)*sy);
+     ctx.save();ctx.fillStyle=color;ctx.font=fontWeight+' '+font+'px Arial';ctx.textBaseline='top';
+     ctx.textAlign=align;const x=align==='right'?p.x+p.w:p.x;
+     const words=el.textContent.trim().split(/\s+/);
+     const lines=[];let line='';
+     for(const word of words){
+      const test=line?line+' '+word:word;
+      if(ctx.measureText(test).width<=p.w||!line){line=test}
+      else{lines.push(line);line=word}
+     }
+     if(line)lines.push(line);
+     const lh=Math.max(font*1.18,parseFloat(st.lineHeight||0)*sy||0);
+     for(let i=0;i<Math.min(lines.length,Math.floor((p.h+1)/lh)||1);i++){
+      let text=lines[i];
+      while(ctx.measureText(text).width>p.w&&text.length>2)text=text.slice(0,-2)+'…';
+      ctx.fillText(text,x,p.y+i*lh);
+     }
+     ctx.restore();
+    };
+    write(sheet.querySelector('.rf-report-title'),'#182946',700);
+    write(sheet.querySelector('.rf-report-enterprise'),'#283750');
+    write(sheet.querySelector('.rf-report-date'),'#a4a6aa');
+    write(sheet.querySelector('.rf-section'),'#26354b',600);
+    write(sheet.querySelector('.rf-page-number'),'#8f939b',400,'right');
+    const line=sheet.querySelector('.rf-report-head');
+    if(line){const p=pos(line);ctx.fillStyle='#c5ae8b';ctx.fillRect(p.x,p.y+p.h-2*sy,p.w,Math.max(1.5,1.2*sy))}
+    for(const cell of sheet.querySelectorAll('.rf-cell')){
+     const container=cell.querySelector('.rf-photo'),photo=cell.querySelector('.rf-photo img');
+     const p=pos(container);
+     const frame=cell.classList.contains('rf-featured');
+     const cropScale=Math.max(p.w/photo.naturalWidth,p.h/photo.naturalHeight);
+     const srcW=p.w/cropScale,srcH=p.h/cropScale;
+     const srcX=(photo.naturalWidth-srcW)/2,srcY=(photo.naturalHeight-srcH)/2;
+     ctx.save();rounded(p.x,p.y,p.w,p.h,4*sx);ctx.clip();
+     ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h);ctx.restore();
+     if(frame){ctx.strokeStyle='#bd9c65';ctx.lineWidth=Math.max(2,1.8*sx);rounded(p.x,p.y,p.w,p.h,4*sx);ctx.stroke()}
+     const number=cell.querySelector('.rf-number');
+     if(number){
+      const n=pos(number);ctx.fillStyle='#20314e';rounded(n.x,n.y,n.w,n.h,4*sx);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font='600 '+(parseFloat(getComputedStyle(number).fontSize)*sy)+'px Arial';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(number.textContent,n.x+n.w/2,n.y+n.h/2);
+     }
+     const anomaly=cell.querySelector('.rf-alert');
+     if(anomaly){
+      const a=pos(anomaly);ctx.fillStyle=anomaly.classList.contains('rf-alert-red')?'#db4145':'#de9b19';
+      ctx.strokeStyle='#fff';ctx.lineWidth=2*sx;ctx.beginPath();
+      ctx.arc(a.x+a.w/2,a.y+a.h/2,Math.min(a.w,a.h)/2,0,Math.PI*2);
+      ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font='bold '+Math.max(15,a.h*.7)+'px Arial';ctx.fillText('!',a.x+a.w/2,a.y+a.h/2);
+     }
+     const feature=cell.querySelector('.rf-feature-mark');
+     if(feature){const a=pos(feature);ctx.fillStyle='#bd9c65';ctx.font='bold '+Math.max(13,a.h*.9)+'px Arial';ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText('★',a.x+a.w,a.y+a.h)}
+     const caption=cell.querySelector('.rf-caption');
+     if(caption?.textContent.trim())write(caption,'#26354b');
     }
-    if(lines.length*line>r.height-padding+3)throw new Error('O texto não cabe na página. Reduza a legenda ou use menos fotos por página.');
-    for(const text of lines){const x=style.textAlign==='right'?(r.right-rect.x)*scale-ctx.measureText(text).width:(r.x-rect.x)*scale;ctx.fillText(text,x,y);y+=line*scale}
+    if(pageIndex)pdf.addPage();
+    pdf.addImage(canvas.toDataURL('image/jpeg',.91),'JPEG',0,0,210,297);
+    canvas.width=canvas.height=1;
    }
-   if(ix)pdf.addPage();pdf.addImage(canvas.toDataURL('image/jpeg',.98),'JPEG',0,0,210,297);canvas.width=canvas.height=1;
-  }
-  pdf.save((state.titulo.replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)||'relatorio-fotografico')+'.pdf');
-  error({message:'PDF exportado em A4, 300 dpi, com a lauda institucional em todas as páginas.'});
- }catch(e){error(e)}finally{print?.remove();dialog.inert=false;busy=false}}
+   pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+'.pdf');
+   error({message:'PDF A4 exportado com a lauda original e as fotografias do álbum.'});
+  }catch(e){console.error(e);error(e)}
+  finally{print?.remove();dialog.inert=false;busy=false}
+ }
  // The existing album remains the source; this adds only a report action.
  const albumContent=document.querySelector('#pl-album-content');
  new MutationObserver(()=>{if(!albumContent.querySelector('.pl-jobhead')||albumContent.querySelector('#rf-create'))return;const button=document.createElement('button');button.id='rf-create';button.className='pl-new-album';button.textContent='Criar relatório fotográfico';button.onclick=()=>start(albumContent.dataset.albumId);albumContent.querySelector('.pl-jobhead').append(button)}).observe(albumContent,{childList:true});
