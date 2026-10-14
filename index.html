@@ -187,6 +187,7 @@ $('#pl-album-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">Ã
 $('#pl-filters').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{albumFiltro=b.dataset.filter;renderPhotos()}));
 $('#pl-show-deleted').addEventListener('change',e=>{albumIncluiExcluidas=e.target.checked;renderPhotos()});
 renderPhotos();
+window.plAlbumOrganizer?.mount().catch(console.error);
 }
 function renderPhotos(){
 $('#pl-filters').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.filter===albumFiltro));
