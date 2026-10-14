@@ -1,0 +1,25 @@
+(function(){
+let albumId=null,sections=[],active='all',selected=new Set(),mode=false,dragging=false;
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function rpc(name,args){const {data,error}=await window.plSupabase.rpc(name,args);if(error)throw error;return data}
+async function load(){const host=$('#pl-album-content'),grid=$('#pl-photo-grid');if(!host||!grid)return;albumId=host.dataset.albumId;sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});active='all';selected.clear();mode=false;render(); }
+async function act(action,payload){try{await rpc('pl_demo_album_organize',{p_album_id:albumId,p_action:action,p_payload:payload});sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});render()}catch(e){alert('Não foi possível salvar: '+e.message)}}
+function cards(){return [...$('#pl-photo-grid').querySelectorAll('.pl-photo-card')]}
+function photos(){return cards().map(c=>({el:c,id:c.querySelector('[data-preview]')?.dataset.preview})).filter(x=>x.id)}
+async function sectionsMap(){const {data,error}=await window.plSupabase.from('album_fotografias').select('fotografia_id,secao_id,ordem').eq('album_id',albumId).order('ordem');if(error)throw error;return data}
+let mapping=[];
+async function render(){const grid=$('#pl-photo-grid');if(!grid)return;
+try{mapping=await sectionsMap()}catch(e){console.warn('Organização indisponível:',e);return}
+const map=new Map(mapping.map(x=>[x.fotografia_id,x]));const previous=$('#pl-section-controls');previous?.remove();
+const panel=document.createElement('div');panel.id='pl-section-controls';panel.innerHTML='<nav class="pl-sections">'+[{id:'all',nome:'Todas'},{id:'none',nome:'Sem seção'},...sections].map(s=>'<button data-section="'+esc(s.id)+'" class="'+(active===s.id?'current':'')+'">'+esc(s.nome)+'</button>').join('')+'<button id="pl-section-add">＋</button></nav><div class="pl-bulk"><button id="pl-bulk-mode">'+(mode?'Cancelar seleção':'Selecionar fotos')+'</button>'+(selected.size?'<strong>'+selected.size+' selecionadas</strong><select id="pl-bulk-move"><option value="">Mover para…</option><option value="none">Sem seção</option>'+sections.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.nome)+'</option>').join('')+'</select>':'')+(active!=='all'&&active!=='none'?'<button id="pl-section-rename">Renomear</button><button id="pl-section-remove">Excluir seção</button>':'')+'</div>';
+grid.before(panel);
+panel.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{active=b.dataset.section;selected.clear();mode=false;render()});
+$('#pl-section-add').onclick=()=>{const nome=prompt('Nome da seção');if(nome?.trim())act('create',{nome:nome.trim()})};
+$('#pl-bulk-mode').onclick=()=>{mode=!mode;selected.clear();render()};
+$('#pl-bulk-move')?.addEventListener('change',async e=>{if(e.target.value){await act('move',{ids:[...selected],secao_id:e.target.value==='none'?null:e.target.value});selected.clear();mode=false;render()}});
+$('#pl-section-rename')?.addEventListener('click',()=>{const s=sections.find(x=>x.id===active),nome=prompt('Nome da seção',s?.nome);if(nome?.trim())act('rename',{id:active,nome:nome.trim()})});
+$('#pl-section-remove')?.addEventListener('click',()=>{if(confirm('Excluir a seção? As fotografias voltarão para Sem seção.')){const id=active;active='none';act('delete',{id})}});
+for(const {el,id} of photos()){const info=map.get(id);el.hidden=active!=='all'&&(active==='none'?!!info?.secao_id:info?.secao_id!==active);el.classList.toggle('pl-selected',selected.has(id));const preview=el.querySelector('[data-preview]');if(!preview.dataset.plSelectHook){preview.dataset.plSelectHook='1';preview.addEventListener('click',e=>{if(mode){e.stopImmediatePropagation();e.preventDefault();selected.has(id)?selected.delete(id):selected.add(id);render()}},true);let timer=null,down=null,swipe=false;preview.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;down={x:e.clientX,y:e.clientY};timer=setTimeout(()=>{mode=true;swipe=true;selected.add(id);el.classList.add('pl-selected');render()},430)});preview.addEventListener('pointermove',e=>{if(!down)return;if(!swipe&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>12)clearTimeout(timer);if(swipe){const t=document.elementFromPoint(e.clientX,e.clientY)?.closest('.pl-photo-card');const pid=t?.querySelector('[data-preview]')?.dataset.preview;if(pid){selected.add(pid);t.classList.add('pl-selected')}if(e.clientY>innerHeight-70)window.scrollBy(0,12)}});preview.addEventListener('pointerup',()=>{clearTimeout(timer);down=null;if(swipe){swipe=false;render()}});preview.addEventListener('pointercancel',()=>{clearTimeout(timer);down=null;swipe=false})}}
+}
+let lastGrid=null;new MutationObserver(()=>{const g=$('#pl-photo-grid');if(g&&g!==lastGrid){lastGrid=g;load().catch(console.error)}}).observe(document.body,{childList:true,subtree:true});
+})();
