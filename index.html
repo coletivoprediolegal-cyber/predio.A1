@@ -187,7 +187,7 @@ $('#pl-album-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">�
 $('#pl-filters').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{albumFiltro=b.dataset.filter;renderPhotos()}));
 $('#pl-show-deleted').addEventListener('change',e=>{albumIncluiExcluidas=e.target.checked;renderPhotos()});
 renderPhotos();
-window.plAlbumOrganizer?.mount().catch(console.error);
+if(window.plAlbumOrganizer){window.plAlbumOrganizer.mount().catch(e=>{console.error(e);document.querySelector('#pl-photo-grid')?.insertAdjacentHTML('beforebegin','<p class="pl-error">Erro ao carregar seções: '+String(e.message||e).replace(/[<>]/g,'')+'</p>')})}else{document.querySelector('#pl-photo-grid')?.insertAdjacentHTML('beforebegin','<p class="pl-error">Organizador não carregado. Verifique a atualização do aplicativo.</p>')}
 }
 function renderPhotos(){
 $('#pl-filters').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.filter===albumFiltro));
@@ -255,4 +255,4 @@ load();
 .pl-photo-card.pl-selected{outline:3px solid #24477c;outline-offset:-3px}
 .pl-photo-card.pl-selected .pl-photo-preview:after{content:'✓';position:absolute;top:5px;left:5px;border-radius:50%;width:22px;height:22px;background:#24477c;color:white;display:grid;place-items:center}
 .pl-photo-card[hidden]{display:none!important}
- .pl-photo-actions[hidden]{display:none!important}.pl-photo-card.pl-organizing .pl-photo-preview{touch-action:none}.pl-order-buttons{display:flex}.pl-order-buttons button{flex:1;min-height:36px;border:0;background:#e7dfd1;color:#253650} </style><script src="album-sections.js?v=11" defer></script></body></html>
+ .pl-photo-actions[hidden]{display:none!important}.pl-photo-card.pl-organizing .pl-photo-preview{touch-action:none}.pl-order-buttons{display:flex}.pl-order-buttons button{flex:1;min-height:36px;border:0;background:#e7dfd1;color:#253650} </style><script src="album-sections.js?v=12" defer></script></body></html>
