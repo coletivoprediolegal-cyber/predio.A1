@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const layouts=[1,2,4,6,9,16];
+ const layouts=[1,2,4,6,9,12,16];
  function paginate(items,defaultLayout){
   if(!layouts.includes(defaultLayout))throw new Error('Layout inválido');
   const pages=[];let page=null;
