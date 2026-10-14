@@ -15,7 +15,7 @@ const panel=document.createElement('div');panel.id='pl-section-controls';panel.i
 grid.before(panel);
 panel.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{active=b.dataset.section;selected.clear();mode=false;render()});
 $('#pl-section-add').onclick=()=>{const nome=prompt('Nome da seção');if(nome?.trim())act('create',{nome:nome.trim()})};
-$('#pl-bulk-mode').onclick=()=>{mode=!mode;reorder=false;selected.clear();render()};$('#pl-order-mode')?.onclick=()=>{reorder=!reorder;mode=false;selected.clear();render()};
+$('#pl-bulk-mode').onclick=()=>{mode=!mode;reorder=false;selected.clear();render()};$('#pl-order-mode').onclick=()=>{reorder=!reorder;mode=false;selected.clear();render()};
 $('#pl-bulk-move')?.addEventListener('change',async e=>{if(e.target.value){await act('move',{ids:[...selected],secao_id:e.target.value==='none'?null:e.target.value});selected.clear();mode=false;render()}});
 $('#pl-section-rename')?.addEventListener('click',()=>{const s=sections.find(x=>x.id===active),nome=prompt('Nome da seção',s?.nome);if(nome?.trim())act('rename',{id:active,nome:nome.trim()})});
 $('#pl-section-remove')?.addEventListener('click',()=>{if(confirm('Excluir a seção? As fotografias voltarão para Sem seção.')){const id=active;active='none';act('delete',{id})}});
