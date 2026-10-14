@@ -48,7 +48,7 @@
     try{
      const directory=await check(sb.rpc('pl_demo_client_directory'));
      for(const client of directory||[]){
-      if((client.jobs||[]).some(j=>(j.albuns||[]).some(a=>a.id===albumId)||j.id===(window.plJobAtual||''))){empreendimento=client.nome;break}
+      if((client.jobs||[]).some(j=>(d.fotos||[]).some(f=>(f.jobs||[]).some(fj=>fj.id===j.id)))){const job=(client.jobs||[]).find(j=>(d.fotos||[]).some(f=>(f.jobs||[]).some(fj=>fj.id===j.id)));empreendimento=job?.empreendimento||client.empreendimentos?.[0]?.nome||client.nome;break}
      }
     }catch(e){console.warn('Empreendimento da demonstração indisponível',e)}
    }else{
@@ -76,7 +76,7 @@
      fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:link.secao_id||null,
      secao_nome:sectionNames.get(link.secao_id)||'',
      incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
-     legenda:f.observacao_tecnica||f.legenda_sugerida||'',
+     legenda:f.observacao_tecnica||'',
      observacao:f.observacao_tecnica||'',destaque_no_relatorio:!!f.destaque,
      fotos_por_pagina_override:null
     });
