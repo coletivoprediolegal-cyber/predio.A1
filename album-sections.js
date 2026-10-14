@@ -2,7 +2,7 @@
 let albumId=null,sections=[],active='all',selected=new Set(),mode=false,dragging=false,reorder=false,dragId=null;
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function rpc(name,args){const {data,error}=await window.plSupabase.rpc(name,args);if(error)throw error;return data}
-async function load(){const host=$('#pl-album-content'),grid=$('#pl-photo-grid');if(!host||!grid)return;albumId=albumAtual;sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});active='all';selected.clear();mode=false;render(); }
+async function load(){const host=$('#pl-album-content'),grid=$('#pl-photo-grid');if(!host||!grid)return;albumId=albumAtual;if(!albumId)return;sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});active='all';selected.clear();mode=false;render(); }
 async function act(action,payload){try{await rpc('pl_demo_album_organize',{p_album_id:albumId,p_action:action,p_payload:payload});sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});render()}catch(e){alert('Não foi possível salvar: '+e.message)}}
 function cards(){return [...$('#pl-photo-grid').querySelectorAll('.pl-photo-card')]}
 function photos(){return cards().map(c=>({el:c,id:c.querySelector('[data-preview]')?.dataset.preview})).filter(x=>x.id)}
