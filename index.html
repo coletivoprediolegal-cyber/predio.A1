@@ -102,7 +102,7 @@ fold('Tarefas',tasks,t.length,false)+fold('Histórico e observações','<p class
 fold('Informações adicionais','<p class="pl-meta">Atividade: '+esc(j.atividade||'Não definida')+'</p><p class="pl-meta">Contato: '+esc(j.contato||'Não definido')+'</p>',null,false);
 $('#pl-job-content').querySelectorAll('[data-pl-parcela]').forEach(btn=>btn.addEventListener('click',async()=>{
 const p=parcelas.find(x=>String(x.numero)===btn.dataset.plParcela);if(!p||!ready)return;
-const msg=['Razão social: '+fat.razao_social,'CNPJ: '+fat.cnpj,'CCM: '+fat.ccm,'Descrição: '+fat.descricao_servico,'Parcela: '+p.numero+(p.total?'/'+p.total:''),'Valor da parcela: '+money(p.valor)].join('\n');
+const msg=['Razão social: '+fat.razao_social,'CNPJ: '+fat.cnpj,'CCM: '+fat.ccm,'Descrição: '+fat.descricao_servico,'Parcela: '+p.numero+(p.total?'/'+p.total:''),'Valor da parcela: '+money(p.valor)].join(String.fromCharCode(10));
 try{await navigator.clipboard.writeText(msg);btn.textContent='✓ Copiado';setTimeout(()=>btn.textContent='⧉ Copiar',1800)}catch(e){btn.textContent='Falha ao copiar';console.warn('Clipboard indisponível',e)}
 }));
 }
