@@ -6,7 +6,7 @@ async function load(){const host=$('#pl-album-content'),grid=$('#pl-photo-grid')
 async function act(action,payload){try{await rpc('pl_demo_album_organize',{p_album_id:albumId,p_action:action,p_payload:payload});sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});render()}catch(e){alert('Não foi possível salvar: '+e.message)}}
 function cards(){return [...$('#pl-photo-grid').querySelectorAll('.pl-photo-card')]}
 function photos(){return cards().map(c=>({el:c,id:c.querySelector('[data-preview]')?.dataset.preview})).filter(x=>x.id)}
-async function sectionsMap(){const {data,error}=await window.plSupabase.from('album_fotografias').select('fotografia_id,secao_id,ordem').eq('album_id',albumId).order('ordem');if(error)throw error;return data}
+async function sectionsMap(){return await rpc('pl_demo_album_section_members',{p_album_id:albumId})}
 let mapping=[];
 async function render(){const grid=$('#pl-photo-grid');if(!grid)return;
 try{mapping=await sectionsMap()}catch(e){console.warn('Organização indisponível:',e);return}
