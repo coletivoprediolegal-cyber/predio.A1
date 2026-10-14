@@ -28,16 +28,66 @@
   if(busy)return;
   if(!(await discard()))return;
   const generation=++revision;
-  opener=document.activeElement;dialog.hidden=false;dialog.innerHTML='<p>Carregando álbum e fotografias originais…</p>';busy=true;release();
+  opener=document.activeElement;dialog.hidden=false;
+  dialog.innerHTML='<p>Preparando relatório a partir da organização do álbum…</p>';
+  busy=true;release();
   try{
-   const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Entre com Google em Minha conta para criar relatórios.');
-   const album=await check(sb.from('albuns').select('*').eq('id',albumId).single());
-   const links=await check(sb.from('album_fotografias').select('ordem,fotografias(*)').eq('album_id',albumId).order('ordem'));
+   let album,links,sections=[],demo=false,empreendimento='';
+   const demoData=await sb.rpc('pl_demo_album_photos',{p_album_id:albumId});
+   if(!demoData.error&&demoData.data?.titulo){
+    demo=true;
+    const d=demoData.data;
+    album={id:albumId,titulo:d.titulo,assunto:d.assunto||'',data_vistoria:d.data};
+    const members=await sb.rpc('pl_demo_album_sections',{p_album_id:albumId});
+    if(!members.error&&Array.isArray(members.data))sections=members.data;
+    links=(d.fotos||[]).map(f=>({ordem:f.numero,secao_id:f.secao_id,fotografias:{
+      id:f.id,metadados:{demo:true,referencia_url:f.url},nome_original:f.nome,
+      destaque:f.destaque,nivel_anomalia:f.anomalia,observacao_tecnica:f.observacao,
+      oculta_relatorio:f.oculta,excluida_em:f.excluida?'excluida':null
+    }}));
+    try{
+     const directory=await check(sb.rpc('pl_demo_client_directory'));
+     for(const client of directory||[]){
+      if((client.jobs||[]).some(j=>(j.albuns||[]).some(a=>a.id===albumId)||j.id===(window.plJobAtual||''))){empreendimento=client.nome;break}
+     }
+    }catch(e){console.warn('Empreendimento da demonstração indisponível',e)}
+   }else{
+    const auth=await sb.auth.getSession();
+    if(!auth.data?.session)throw new Error('Entre com Google em Minha conta para criar relatórios profissionais.');
+    album=await check(sb.from('albuns').select('*').eq('id',albumId).single());
+    links=await check(sb.from('album_fotografias').select('ordem,secao_id,fotografias(*)').eq('album_id',albumId).order('ordem'));
+    try{sections=await check(sb.from('album_secoes').select('id,nome').eq('album_id',albumId).order('ordem'))}catch(e){sections=[]}
+    try{
+     const rel=await check(sb.from('album_jobs').select('jobs(titulo,clientes(nome))').eq('album_id',albumId).limit(1));
+     empreendimento=rel?.[0]?.jobs?.clientes?.nome||rel?.[0]?.jobs?.titulo||'';
+    }catch(e){console.warn('Identificação do empreendimento indisponível',e)}
+   }
    if(generation!==revision)return;
-   state={album,id:null,titulo:'Relatório fotográfico — '+album.titulo,descricao:album.assunto||'',layout:4,items:[]};
-   for(const link of links){const f=link.fotografias;if(!f||f.excluida_em)continue;const url=await sourceURL(f);if(generation!==revision){release();return}state.items.push({fotografia_id:f.id,source:f,url,numero:link.ordem,incluir:![true,'true'].includes(f.metadados?.oculta_relatorio),legenda:f.legenda_sugerida??f.observacao_tecnica??'',observacao:f.observacao_tecnica||'',destaque_no_relatorio:!!f.destaque,fotos_por_pagina_override:null})}
-   dirty=false;render();if(state.items.some(i=>i.source.metadados?.demo))error({message:'Este álbum contém imagens ilustrativas de demonstração.'});
-  }catch(e){if(generation!==revision)return;release();dialog.innerHTML='<button id="rf-close">Fechar</button><p class="rf-message"></p>';dialog.querySelector('button').onclick=close;error(e)}finally{busy=false}
+   const sectionNames=new Map(sections.map(x=>[x.id,x.nome]));
+   state={album,id:null,demo,empreendimento,titulo:'Relatório fotográfico',
+    descricao:'',layout:12,items:[]};
+   for(const link of links){
+    const f=link.fotografias;
+    if(!f||f.excluida_em)continue;
+    let url;
+    try{url=await sourceURL(f)}catch(e){console.warn(e);continue}
+    if(generation!==revision){release();return}
+    state.items.push({
+     fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:link.secao_id||null,
+     secao_nome:sectionNames.get(link.secao_id)||'',
+     incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
+     legenda:f.observacao_tecnica||f.legenda_sugerida||'',
+     observacao:f.observacao_tecnica||'',destaque_no_relatorio:!!f.destaque,
+     fotos_por_pagina_override:null
+    });
+   }
+   dirty=false;render();
+   if(demo)error({message:'Prévia demonstrativa: imagens ilustrativas. A ordem e os destaques acompanham o álbum.'});
+  }catch(e){
+   if(generation!==revision)return;
+   release();dialog.innerHTML='<button id="rf-close">Fechar</button><p class="rf-message"></p>';
+   dialog.querySelector('button').onclick=close;error(e)
+  }finally{busy=false}
  }
  async function close(){if(busy)return;if(!(await discard()))return;dialog.hidden=true;release();state=null;dirty=false;document.querySelector('#rf-print')?.remove();opener?.focus()}
  function options(selected,inherit=false){return (inherit?'<option value="0">Padrão do documento</option>':'')+core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' foto'+(n>1?'s':'')+' por página</option>').join('')}
@@ -59,11 +109,36 @@
    row.querySelectorAll('[data-move]').forEach(el=>el.onclick=()=>{const next=index+Number(el.dataset.move);[state.items[index],state.items[next]]=[state.items[next],state.items[index]];dirty=true;rows();preview()});
   });
  }
- function sheets(){const pages=core.paginate(state.items,state.layout);return pages.map((p,ix)=>{
-  const columns=p.size===1||p.size===2?1:p.size===4||p.size===6?2:p.size===9?3:4;
-  const rows=Math.ceil(p.size/columns);
-  return '<section class="rf-sheet"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal"><div class="rf-content"><h2 class="rf-heading">'+escape(state.titulo)+'</h2>'+(state.descricao?'<p class="rf-subtitle">'+escape(state.descricao)+'</p>':'')+'<div class="rf-cells" style="grid-template-columns:repeat('+columns+',minmax(0,1fr));grid-template-rows:repeat('+rows+',minmax(0,1fr))">'+p.items.map(i=>'<figure class="rf-cell"><img src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'"><figcaption>'+escape('Foto '+i.numero+' — '+i.legenda)+(i.source.nivel_anomalia?'<br>'+escape('Anomalia '+i.source.nivel_anomalia):i.source.destaque?'<br>Destaque':'')+'</figcaption></figure>').join('')+'</div><div class="rf-page-number">'+(ix+1)+' / '+pages.length+'</div></div></section>';
- }).join('')}
+ function sheets(){
+  const pages=core.paginate(state.items,state.layout);
+  return pages.map((p,ix)=>{
+   const columns=p.size>=16?4:p.size>=9?3:p.size>=4?2:1;
+   const rows=Math.ceil(p.size/columns);
+   const name=state.empreendimento||state.album.titulo||'';
+   const ref=state.album.data_vistoria?new Date(state.album.data_vistoria+'T12:00:00').toLocaleDateString('pt-BR'):'';
+   const cells=p.items.map(i=>{
+    const anomaly=i.source.nivel_anomalia;
+    const note=(i.legenda||'').trim();
+    const featured=i.destaque_no_relatorio;
+    const cls='rf-cell'+(featured?' rf-featured':'');
+    const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
+    return '<figure class="'+cls+'"><div class="rf-photo"><img src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
+     '<span class="rf-number">'+escape(String(i.numero).padStart(2,'0'))+'</span>'+
+     (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
+     (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
+     '</div><figcaption class="rf-caption">'+(note?escape(note):'')+'</figcaption></figure>';
+   }).join('');
+   const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
+   const section=sectionNames.length===1?sectionNames[0]:'';
+   return '<section class="rf-sheet"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
+    '<div class="rf-content"><div class="rf-report-head"><div class="rf-report-title">RELATÓRIO FOTOGRÁFICO</div>'+
+    '<div class="rf-report-enterprise">'+escape(name)+'</div>'+
+    '<div class="rf-report-date">'+(ref?'Data de referência: '+escape(ref):'')+'</div></div>'+
+    (section?'<div class="rf-section">'+escape(section)+'</div>':'')+
+    '<div class="rf-cells" style="--rf-columns:'+columns+';--rf-rows:'+rows+'">'+cells+'</div>'+
+    '<div class="rf-page-number">'+(ix+1)+' / '+pages.length+'</div></div></section>';
+  }).join('');
+ }
  function preview(){dialog.querySelector('.rf-preview').innerHTML=sheets()||'<p>Selecione ao menos uma fotografia.</p>'}
  async function save(){if(busy)return;busy=true;dialog.querySelector('#rf-save').disabled=true;try{
   if(!state.titulo.trim())throw new Error('Informe um título.');
