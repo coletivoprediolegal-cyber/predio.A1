@@ -115,7 +115,7 @@
    '<span id="rf-preview-count"></span><button id="rf-page-next" type="button" aria-label="Próxima página">›</button></div></div>'+
    '<div class="rf-preview" aria-label="Prévia da página selecionada"></div></section>'+
    '<details class="rf-advanced" id="rf-advanced"><summary>Ajustes opcionais <span>Fotos e observações</span></summary>'+
-   '<div class="rf-advanced-inner"><p>Arraste a miniatura ou ⠿ para ordenar · ★ Destaque · ⚠ Anomalia (cinza → amarelo → vermelho).</p>'+
+   '<div class="rf-advanced-inner"><p>Arraste a miniatura ou ⠿ para ordenar · ★ Destaque · ⚠ Anomalia (cinza → amarelo → vermelho → cinza).</p>'+
    (!state.demo?'<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label>'+
    '<div class="rf-advanced-save"><button id="rf-save" type="button">Salvar relatório</button><button id="rf-load" type="button">Abrir relatório salvo</button></div></div>':'')+
    '<div class="rf-edit-tools"><label>Exibir <select id="rf-edit-filter"><option value="all">Todas as fotos</option><option value="highlight">Destaques</option>'+
