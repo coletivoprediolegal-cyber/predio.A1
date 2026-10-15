@@ -199,7 +199,8 @@
     '<button type="button" class="rf-mark rf-highlight-mark'+(highlight?' is-marked':'')+'" data-album-action="destaque"'+
     ' title="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-label="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-pressed="'+highlight+'">★</button>'+
     '<button type="button" class="rf-mark rf-anomaly-mark '+anomalyCls+'" data-album-action="anomalia"'+
-    ' title="'+anomalyLabel(anomaly)+'" aria-label="'+anomalyLabel(anomaly)+'">⚠</button>'+
+    ' title="'+anomalyLabel(anomaly)+'" aria-label="'+anomalyLabel(anomaly)+'">'+
+    '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5Z" fill="currentColor"/><path d="M12 9v5.5" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.2" fill="#fff"/></svg></button>'+
     '<button type="button" data-edit-toggle aria-expanded="false">Editar</button></div>'+
     '<div class="rf-row-details" hidden><label>Observação desta foto<textarea maxlength="1000" data-field="legenda">'+escape(item.legenda)+'</textarea></label>'+
     '</div></div></article>';
