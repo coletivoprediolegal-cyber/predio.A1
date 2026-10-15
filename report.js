@@ -115,7 +115,7 @@
    '<span id="rf-preview-count"></span><button id="rf-page-next" type="button" aria-label="Próxima página">›</button></div></div>'+
    '<div class="rf-preview" aria-label="Prévia da página selecionada"></div></section>'+
    '<details class="rf-advanced" id="rf-advanced"><summary>Ajustes opcionais <span>Fotos e observações</span></summary>'+
-   '<div class="rf-advanced-inner"><p>Arraste a miniatura ou ⠿ para ordenar · ★ Destaque · ⚠ Anomalia (cinza → amarelo → vermelho → cinza).</p>'+
+   '<div class="rf-advanced-inner"><p>Arraste a foto para ordenar · ★ Destaque · ⚠ Anomalia</p>'+
    (!state.demo?'<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label>'+
    '<div class="rf-advanced-save"><button id="rf-save" type="button">Salvar relatório</button><button id="rf-load" type="button">Abrir relatório salvo</button></div></div>':'')+
    '<div class="rf-edit-tools"><label>Exibir <select id="rf-edit-filter"><option value="all">Todas as fotos</option><option value="highlight">Destaques</option>'+
@@ -190,19 +190,21 @@
   const notes=!!item.legenda?.trim(),highlight=!!item.destaque_no_relatorio;
   const anomaly=item.source.nivel_anomalia||null;
   const anomalyCls=anomaly==='vermelha'?'rf-anomaly-red':anomaly==='amarela'?'rf-anomaly-yellow':'';
-  const info=notes?'▤ Nota':'';
   return '<article class="rf-row" data-index="'+i+'" data-photo-id="'+escape(item.fotografia_id)+'">'+
-   '<img src="'+escape(item.url)+'" loading="lazy" alt="">'+
+   '<button type="button" class="rf-row-thumb" data-drag-handle title="Segure a foto e arraste para reorganizar" aria-label="Segurar e arrastar foto '+escape(item.numero)+'">'+
+    '<img src="'+escape(item.url)+'" loading="lazy" alt="" draggable="false"><span class="rf-thumb-grip" aria-hidden="true">⠿</span></button>'+
    '<div class="rf-row-body"><div class="rf-row-line">'+
-    '<button type="button" class="rf-drag-handle" data-drag-handle title="Segure e arraste para mover a foto" aria-label="Arrastar foto '+escape(item.numero)+'">⠿</button>'+
-    '<label class="rf-inclusion"><input type="checkbox" data-field="incluir" '+(item.incluir?'checked':'')+'> Foto '+escape(String(item.numero).padStart(2,'0'))+'</label>'+
-    '<span class="rf-row-tags">'+info+'</span>'+
-    '<button type="button" class="rf-mark rf-highlight-mark'+(highlight?' is-marked':'')+'" data-album-action="destaque"'+
-    ' title="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-label="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-pressed="'+highlight+'">★</button>'+
-    '<button type="button" class="rf-mark rf-anomaly-mark '+anomalyCls+'" data-album-action="anomalia"'+
-    ' title="'+anomalyLabel(anomaly)+'" aria-label="'+anomalyLabel(anomaly)+'">'+
-    '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5Z" fill="currentColor"/><path d="M12 9v5.5" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.2" fill="#fff"/></svg></button>'+
-    '<button type="button" data-edit-toggle aria-expanded="false">Editar</button></div>'+
+    '<label class="rf-inclusion"><input type="checkbox" data-field="incluir" '+(item.incluir?'checked':'')+'>'+
+    '<span>Foto '+escape(String(item.numero).padStart(2,'0'))+'</span>'+
+    (notes?'<span class="rf-note-indicator" title="Possui observação">▤</span>':'')+'</label>'+
+    '<div class="rf-row-actions">'+
+     '<button type="button" class="rf-mark rf-highlight-mark'+(highlight?' is-marked':'')+'" data-album-action="destaque"'+
+      ' title="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-label="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-pressed="'+highlight+'">★</button>'+
+     '<button type="button" class="rf-mark rf-anomaly-mark '+anomalyCls+'" data-album-action="anomalia"'+
+      ' title="'+anomalyLabel(anomaly)+'" aria-label="'+anomalyLabel(anomaly)+'">'+
+      '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5Z" fill="currentColor"/><path d="M12 9v5.5" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.2" fill="#fff"/></svg></button>'+
+     '<button type="button" class="rf-edit-link" data-edit-toggle aria-label="Editar observação da foto '+escape(item.numero)+'" aria-expanded="false">Editar</button>'+
+    '</div></div>'+
     '<div class="rf-row-details" hidden><label>Observação desta foto<textarea maxlength="1000" data-field="legenda">'+escape(item.legenda)+'</textarea></label>'+
     '</div></div></article>';
  }
@@ -226,7 +228,6 @@
   row.querySelectorAll('[data-album-action]').forEach(button=>button.onclick=()=>editAlbumPhoto(state.items[index],button.dataset.albumAction));
   row.querySelector('[data-drag-handle]').addEventListener('pointerdown',startReportDrag);
   row.querySelector('img').draggable=false;
-  row.querySelector('img').addEventListener('pointerdown',startReportDrag);
  }
  function rows(){
   const target=dialog.querySelector('#rf-items');
