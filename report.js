@@ -90,9 +90,9 @@
   }finally{busy=false}
  }
  async function close(){if(busy)return;if(!(await discard()))return;dialog.hidden=true;release();state=null;dirty=false;document.querySelector('#rf-print')?.remove();opener?.focus()}
- function options(selected,inherit=false){return (inherit?'<option value="0">Padrão do documento</option>':'')+core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' foto'+(n>1?'s':'')+' por página</option>').join('')}
+ function options(selected){return core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' fotos por página</option>').join('')}
  function render(){
-  dialog.innerHTML='<button id="rf-close">‹ Voltar ao álbum</button><h1>Criar relatório fotográfico</h1><p>Fonte: '+escape(state.album.titulo)+'. As legendas abaixo pertencem apenas ao relatório.</p><label>Título<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label><label>Descrição<textarea id="rf-description" maxlength="500">'+escape(state.descricao)+'</textarea></label><div class="rf-toolbar"><label>Layout padrão <select id="rf-layout">'+options(state.layout)+'</select></label><button id="rf-all">Selecionar todas</button><button id="rf-none">Desmarcar todas</button><button id="rf-save">Salvar relatório</button><button id="rf-pdf">Exportar PDF</button><button id="rf-load">Abrir relatório salvo</button></div><p class="rf-message" role="status"></p><div class="rf-workspace"><div id="rf-items"></div><div class="rf-preview" aria-label="Prévia A4"></div></div>';
+  dialog.innerHTML='<button id="rf-close">‹ Voltar ao álbum</button><h1>Criar relatório fotográfico</h1><p>Fonte: '+escape(state.album.titulo)+'. As legendas abaixo pertencem apenas ao relatório.</p><label>Título<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label><label>Descrição<textarea id="rf-description" maxlength="500">'+escape(state.descricao)+'</textarea></label><div class="rf-toolbar"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label><button id="rf-all">Selecionar todas</button><button id="rf-none">Desmarcar todas</button><button id="rf-save">Salvar relatório</button><button id="rf-pdf">Exportar PDF</button><button id="rf-load">Abrir relatório salvo</button></div><p class="rf-message" role="status"></p><div class="rf-workspace"><div id="rf-items"></div><div class="rf-preview" aria-label="Prévia A4"></div></div>';
   dialog.querySelector('#rf-close').onclick=close;
   for(const [id,key] of [['rf-title','titulo'],['rf-description','descricao']])dialog.querySelector('#'+id).oninput=e=>{state[key]=e.target.value;dirty=true;preview()};
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);dirty=true;preview()};
@@ -102,17 +102,17 @@
  }
  function selectAll(value){state.items.forEach(i=>i.incluir=value);dirty=true;rows();preview()}
  function rows(){
-  dialog.querySelector('#rf-items').innerHTML=state.items.map((i,index)=>'<article class="rf-row" data-index="'+index+'"><img src="'+escape(i.url)+'" alt="Foto '+escape(i.numero)+'"><div><label><input type="checkbox" data-field="incluir" '+(i.incluir?'checked':'')+'> Foto '+escape(i.numero)+'</label><div>'+escape([i.source.destaque?'Destaque':'',i.source.nivel_anomalia?'Anomalia '+i.source.nivel_anomalia:''].filter(Boolean).join(' · '))+'</div><label>Legenda do relatório<textarea maxlength="1000" data-field="legenda">'+escape(i.legenda)+'</textarea></label><div class="rf-toolbar"><button data-move="-1" aria-label="Mover foto para cima" '+(!index?'disabled':'')+'>↑</button><button data-move="1" aria-label="Mover foto para baixo" '+(index===state.items.length-1?'disabled':'')+'>↓</button><select data-field="fotos_por_pagina_override" aria-label="Layout desta foto">'+options(i.fotos_por_pagina_override,true)+'</select></div><small>Mudar o layout inicia outra página.</small></div></article>').join('');
+  dialog.querySelector('#rf-items').innerHTML=state.items.map((i,index)=>'<article class="rf-row" data-index="'+index+'"><img src="'+escape(i.url)+'" alt="Foto '+escape(i.numero)+'"><div><label><input type="checkbox" data-field="incluir" '+(i.incluir?'checked':'')+'> Foto '+escape(i.numero)+'</label><div>'+escape([i.source.destaque?'Destaque':'',i.source.nivel_anomalia?'Anomalia '+i.source.nivel_anomalia:''].filter(Boolean).join(' · '))+'</div><label>Legenda do relatório<textarea maxlength="1000" data-field="legenda">'+escape(i.legenda)+'</textarea></label><div class="rf-toolbar"><button data-move="-1" aria-label="Mover foto para cima" '+(!index?'disabled':'')+'>↑</button><button data-move="1" aria-label="Mover foto para baixo" '+(index===state.items.length-1?'disabled':'')+'>↓</button></div></div></article>').join('');
   dialog.querySelectorAll('.rf-row').forEach(row=>{
    const index=Number(row.dataset.index);
-   row.querySelectorAll('[data-field]').forEach(el=>el.addEventListener(el.tagName==='TEXTAREA'?'input':'change',()=>{const key=el.dataset.field;state.items[index][key]=key==='incluir'?el.checked:key==='fotos_por_pagina_override'?Number(el.value)||null:el.value;dirty=true;preview()}));
+   row.querySelectorAll('[data-field]').forEach(el=>el.addEventListener(el.tagName==='TEXTAREA'?'input':'change',()=>{const key=el.dataset.field;state.items[index][key]=key==='incluir'?el.checked:el.value;dirty=true;preview()}));
    row.querySelectorAll('[data-move]').forEach(el=>el.onclick=()=>{const next=index+Number(el.dataset.move);[state.items[index],state.items[next]]=[state.items[next],state.items[index]];dirty=true;rows();preview()});
   });
  }
  function sheets(){
   const pages=core.paginate(state.items,state.layout);
   return pages.map((p,ix)=>{
-   const columns=p.size>=16?4:p.size>=9?3:p.size>=4?2:1;
+   const columns=p.size===36?6:p.size===16?4:p.size>=9?3:p.size>=4?2:1;
    const rows=Math.ceil(p.size/columns);
    const name=state.empreendimento||state.album.titulo||'';
    const ref=state.album.data_vistoria?new Date(state.album.data_vistoria+'T12:00:00').toLocaleDateString('pt-BR'):'';
@@ -122,19 +122,19 @@
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
-    return '<figure class="'+cls+'"><div class="rf-photo"><img src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
+    return '<figure class="'+cls+'" data-photo-number="'+escape(i.numero)+'"><div class="rf-photo"><img src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
      '<span class="rf-number">'+escape(String(i.numero).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
-     '</div><figcaption class="rf-caption">'+(note?escape(note):'')+'</figcaption></figure>';
+     '</div>'+(p.size===36?'':'<figcaption class="rf-caption">'+(note?escape(note):'')+'</figcaption>')+'</figure>';
    }).join('');
    const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
    const section=sectionNames.length===1?sectionNames[0]:'';
-   return '<section class="rf-sheet"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
+   return '<section class="rf-sheet rf-layout-'+p.size+'" data-layout="'+p.size+'"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
     '<div class="rf-content"><div class="rf-report-head"><div class="rf-report-title">RELATÓRIO FOTOGRÁFICO</div>'+
     '<div class="rf-report-enterprise">'+escape(name)+'</div>'+
     '<div class="rf-report-date">'+(ref?'Data de referência: '+escape(ref):'')+'</div></div>'+
-    (section?'<div class="rf-section">'+escape(section)+'</div>':'')+
+    '<div class="rf-section">'+(p.size===36?'':escape(section))+'</div>'+
     '<div class="rf-cells" style="--rf-columns:'+columns+';--rf-rows:'+rows+'">'+cells+'</div>'+
     '<div class="rf-page-number">'+(ix+1)+' / '+pages.length+'</div></div></section>';
   }).join('');
@@ -143,7 +143,7 @@
  async function save(){if(busy)return;busy=true;dialog.querySelector('#rf-save').disabled=true;try{
   if(!state.titulo.trim())throw new Error('Informe um título.');
   if(!state.items.some(i=>i.incluir))throw new Error('Selecione ao menos uma fotografia.');
-  const items=state.items.map((i,ordem)=>({fotografia_id:i.fotografia_id,ordem,incluir:i.incluir,legenda:i.legenda,observacao:i.observacao,destaque_no_relatorio:i.destaque_no_relatorio,fotos_por_pagina_override:i.fotos_por_pagina_override}));
+  const items=state.items.map((i,ordem)=>({fotografia_id:i.fotografia_id,ordem,incluir:i.incluir,legenda:i.legenda,observacao:i.observacao,destaque_no_relatorio:i.destaque_no_relatorio,fotos_por_pagina_override:null}));
   state.id=await check(sb.rpc('pl_salvar_relatorio',{p_id:state.id,p_album_id:state.album.id,p_titulo:state.titulo,p_descricao:state.descricao,p_layout:state.layout,p_items:items}));dirty=false;error({message:'Relatório salvo. O álbum e seus arquivos permanecem intactos.'});
  }catch(e){error(e)}finally{busy=false;const button=dialog.querySelector('#rf-save');if(button)button.disabled=false}}
  async function load(){if(busy)return;if(!(await discard()))return;busy=true;try{
@@ -160,7 +160,7 @@
   const originals=new Map(state.items.map(i=>[i.fotografia_id,i]));
   if(items.some(i=>!originals.has(i.fotografia_id)))throw new Error('Há fotografias removidas ou inacessíveis no álbum. Revise a fonte antes de abrir este relatório.');
   const included=new Set(items.map(i=>i.fotografia_id));
-  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=report.fotos_por_pagina;dirty=false;render();
+  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;dirty=false;render();
  }catch(e){error(e)}finally{busy=false}}
  async function exportPDF(){
   if(busy)return;
