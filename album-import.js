@@ -231,6 +231,71 @@
   content.querySelector('#pl-google-done').onclick=close;
   if(pickerSession){googleApi('cleanup',{sessionId:pickerSession}).catch(()=>{});pickerSession=null}
  }
+
+ async function prepareDemoImport(albumId,onActivated){
+  if(processing)return;
+  show();
+  content.innerHTML='<div class="pl-import-eyebrow">IMPORTAR FOTOGRAFIAS REAIS</div>'+
+   '<h2>Adicionar fotografias</h2>'+
+   '<p class="pl-import-description">Este álbum nasceu na demonstração. Para guardar fotografias reais de forma privada, vamos vinculá-lo a um job profissional. O nome, o assunto e as seções serão preservados.</p>'+
+   '<p class="pl-import-status" role="status">Verificando sua conta…</p>';
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){
+   content.innerHTML+='<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-demo-google-login">Entrar com Google</button>'+
+    '<button type="button" class="pl-import-secondary" id="pl-demo-cancel">Cancelar</button></div>';
+   content.querySelector('.pl-import-status').textContent='Entre com uma conta autorizada para importar as fotografias.';
+   content.querySelector('#pl-demo-cancel').onclick=close;
+   content.querySelector('#pl-demo-google-login').onclick=async()=>{
+    sessionStorage.setItem('pl-pending-demo-import',albumId);
+    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
+    if(error){sessionStorage.removeItem('pl-pending-demo-import');content.querySelector('.pl-import-status').textContent=error.message}
+   };
+   return;
+  }
+  let jobs=[];
+  try{
+   await admin();
+   const {data,error}=await sb.rpc('pl_meus_jobs');
+   if(error)throw error;
+   jobs=(Array.isArray(data)?data:[]).filter(j=>j.id);
+   if(!jobs.length)throw Error('Nenhum job profissional está disponível nesta conta.');
+  }catch(e){
+   content.querySelector('.pl-import-status').textContent=e.message||'Conta sem permissão';
+   content.insertAdjacentHTML('beforeend','<div class="pl-import-actions"><button class="pl-import-secondary" id="pl-demo-close" type="button">Fechar</button></div>');
+   content.querySelector('#pl-demo-close').onclick=close;
+   return;
+  }
+  content.innerHTML+='<label class="pl-import-job-label">Vincular ao job profissional<select id="pl-demo-target-job">'+
+   jobs.map(j=>'<option value="'+html(j.id)+'">'+html(j.titulo+(j.empreendimento?' — '+j.empreendimento:''))+'</option>').join('')+
+   '</select></label><p class="pl-import-description">As fotos ficarão no armazenamento privado do Prédio Legal. O álbum deixará de aparecer na demonstração e ficará dentro do job escolhido.</p>'+
+   '<div class="pl-import-actions"><button type="button" class="pl-import-secondary" id="pl-demo-cancel">Cancelar</button>'+
+   '<button type="button" class="pl-import-primary" id="pl-demo-activate">Vincular e escolher fotos</button></div>';
+  content.querySelector('.pl-import-status').textContent='';
+  content.querySelector('#pl-demo-cancel').onclick=close;
+  content.querySelector('#pl-demo-activate').onclick=async()=>{
+   if(processing)return;
+   const jobId=content.querySelector('#pl-demo-target-job').value;
+   if(!jobs.some(j=>j.id===jobId))return;
+   const button=content.querySelector('#pl-demo-activate');
+   button.disabled=true;processing=true;
+   const status=content.querySelector('.pl-import-status');
+   status.textContent='Vinculando o álbum ao job…';
+   try{
+    const {data,error}=await sb.rpc('pl_promover_album_demo_vazio',{p_album_id:albumId,p_job_id:jobId});
+    if(error||data!==albumId)throw error||new Error('Não foi possível vincular o álbum');
+    processing=false;
+    close();
+    if(typeof onActivated==='function'){
+     await onActivated(jobId,albumId);
+    }else{
+     location.reload();
+    }
+   }catch(e){
+    processing=false;button.disabled=false;
+    status.textContent=e.message||'Não foi possível vincular o álbum.';
+   }
+  };
+ }
  async function pickPhotos(albumId,onImported){
   try{await admin()}catch(e){alert(e.message);return}
   show();pickerPolling=false;
@@ -241,6 +306,14 @@
   content.querySelector('#pl-from-google').onclick=()=>googlePhotos(albumId,onImported);
   content.querySelector('#pl-from-device').onclick=()=>{close();pickDevicePhotos(albumId,onImported)};
  }
+ // Retomar o álbum demonstrativo depois do login exigido para importar fotos reais.
+ sb.auth.getSession().then(({data})=>{
+  const pending=sessionStorage.getItem('pl-pending-demo-import');
+  if(pending&&data.session){
+   sessionStorage.removeItem('pl-pending-demo-import');
+   window.dispatchEvent(new CustomEvent('pl:resume-demo-import',{detail:{albumId:pending}}));
+  }
+ }).catch(console.warn);
  // Restaurar a seleção iniciada antes do redirecionamento do Google OAuth.
  sb.auth.getSession().then(async({data})=>{
   const pending=sessionStorage.getItem('pl-google-pending-album');
@@ -250,5 +323,5 @@
   }
  }).catch(console.warn);
 
- window.PLAlbumImport={create,pickPhotos,pickGooglePhotos:googlePhotos};
+ window.PLAlbumImport={create,pickPhotos,pickGooglePhotos:googlePhotos,prepareDemoImport};
 })();
