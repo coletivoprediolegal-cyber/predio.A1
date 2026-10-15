@@ -113,7 +113,7 @@
    if(generation!==revision)return;
    const signedURLs=demo?new Map():await signedPhotoURLs(links);
    if(generation!==revision)return;
-   const sectionNames=new Map(sections.map(x=>[x.id,x.nome]));
+   const sectionNames=new Map(sections.map(x=>[String(x.id),x.nome||x.nome_secao||x.titulo||'']));
    state={album,id:null,demo,empreendimento,titulo:'Relatório fotográfico',
     descricao:'',layout:12,items:[]};
    for(const link of links){
@@ -123,10 +123,10 @@
     if(!url){console.warn('Fotografia sem URL disponível:',f.id);continue}
     state.items.push({
      fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:link.secao_id||null,
-     secao_nome:sectionNames.get(link.secao_id)||'',
+     secao_nome:sectionNames.get(String(link.secao_id))||f.secao_nome||f.nome_secao||'',
      incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
-     legenda:f.observacao_tecnica||'',
-     observacao:f.observacao_tecnica||'',destaque_no_relatorio:!!f.destaque,
+     legenda:f.observacao_tecnica||f.observacao||f.legenda||'',
+     observacao:f.observacao_tecnica||f.observacao||f.legenda||'',destaque_no_relatorio:!!f.destaque,
      fotos_por_pagina_override:null
     });
    }
@@ -513,7 +513,7 @@
   if(!element)return;
   const total=totalPages();previewIndex=Math.min(Math.max(0,previewIndex),Math.max(0,total-1));
   prepareSheets(element,true);updateCounts();
-  const hint=dialog.querySelector('#rf-text-hint');if(hint)hint.textContent=state.layout===36?'36 fotos: somente números e símbolos.':'';
+  const hint=dialog.querySelector('#rf-text-hint');if(hint){const visible=state.items.filter(i=>i.incluir);const notes=visible.filter(i=>(i.legenda||'').trim()).length;const sections=visible.filter(i=>(i.secao_nome||'').trim()).length;hint.textContent=state.layout===36?'36 fotos: somente números e símbolos.':[(showPhotoNotes&&!notes?'Nenhuma observação cadastrada nas fotos incluídas.':''),(showSectionNames&&!sections?'Nenhuma seção vinculada às fotos incluídas.':'')].filter(Boolean).join(' ');}
   const count=dialog.querySelector('#rf-preview-count');
   if(count)count.textContent=total?'Página '+(previewIndex+1)+' de '+total:'Sem fotografias';
   const prev=dialog.querySelector('#rf-page-prev'),next=dialog.querySelector('#rf-page-next');
