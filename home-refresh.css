@@ -95,3 +95,62 @@ header .profile.pl-profile-seal{
 @media(min-width:700px){
  .pl-mascot-stage{height:clamp(500px,70vh,720px);margin:12px auto 30px}
 }
+
+/* Home-capa: frase, mascote e busca são toda a experiência acima da dobra. */
+body > .container:not(.pl-screen):has(.pl-home-intro){
+  --pl-home-nav-space:92px;
+}
+body > .container:not(.pl-screen) .pl-home-intro{
+  min-height:0!important;
+  flex:none;
+  margin:0!important;
+}
+body > .container:not(.pl-screen) .pl-home-quote-wrap{
+  padding:12px 0 4px!important;
+}
+body > .container:not(.pl-screen) .pl-mascot-stage{
+  display:flex!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0 auto!important;
+  flex:1 1 auto;
+  overflow:hidden;
+  width:100%;
+  background:transparent!important;
+}
+body > .container:not(.pl-screen) .pl-mascot-stage img{
+  width:100%;height:100%;object-fit:contain!important;
+}
+body > .container:not(.pl-screen) > .search{
+  flex:none;
+  margin:10px 0 18px;
+}
+/* Apply to mobile and desktop, with fixed bottom navigation accounted for. */
+body > .container:not(.pl-screen):has(.pl-home-intro){
+  display:flex;
+  flex-direction:column;
+}
+body > .container:not(.pl-screen) > .pl-home-intro,
+body > .container:not(.pl-screen) > .pl-mascot-stage,
+body > .container:not(.pl-screen) > .search{order:0}
+body > .container:not(.pl-screen) > .section{order:1}
+body > .container:not(.pl-screen) > .section:first-of-type{
+  margin-top:0;
+}
+@media(max-width:699px){
+  body > .container:not(.pl-screen):has(.pl-home-intro){
+    min-height:calc(100dvh - 55px - 83px);
+  }
+  body > .container:not(.pl-screen) > .pl-mascot-stage{
+    height:clamp(380px,58dvh,680px)!important;
+    flex:0 0 auto;
+  }
+  body > .container:not(.pl-screen) > .search{
+    margin-top:8px;
+    margin-bottom:max(24px,calc(100dvh - 55px - 83px - 108px - 58dvh - 46px));
+  }
+}
+@media(min-width:700px){
+ body > .container:not(.pl-screen) > .pl-mascot-stage{height:clamp(480px,68dvh,780px)!important;flex:0 0 auto}
+ body > .container:not(.pl-screen) > .search{margin-bottom:35px}
+}
