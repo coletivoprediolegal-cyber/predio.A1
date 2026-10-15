@@ -213,3 +213,9 @@
  .rf-dialog .rf-row-actions button{min-width:28px;width:28px}
  .rf-dialog .rf-row-actions .rf-edit-link{min-width:32px}
 }
+
+/* Legendas configuráveis no relatório */
+.rf-report-visible-options{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:1px 0 14px;font:400 12px 'Instrument Sans',Arial,sans-serif;color:#7b766f}
+.rf-report-visible-options label{display:inline-flex;align-items:center;gap:6px;min-height:28px;white-space:nowrap;cursor:pointer}
+.rf-report-visible-options input{margin:0;width:16px;height:16px;accent-color:#273957}
+.rf-report-visible-options span{color:#ad8a64;font-size:11px}
