@@ -19,11 +19,56 @@
   });return pendingDiscard;
  }
  async function check(result){const {data,error:e}=await result;if(e)throw e;return data}
- async function sourceURL(f){
+ function demoPhotoURL(f){
   const u=f.metadados?.demo===true||f.metadados?.demo==='true'?f.metadados?.referencia_url:null;
-  if(u&&/^https:\/\/images\.unsplash\.com\/photo-/.test(u))return u;
-  if(f.arquivo_caminho){const blob=await check(sb.storage.from('predio-legal-fotos').download(f.arquivo_caminho));const u=URL.createObjectURL(blob);urls.add(u);return u}
-  throw new Error('Fotografia original indisponível: '+(f.nome_original||f.id));
+  return u&&/^https:\/\/images\.unsplash\.com\/photo-/.test(u)?u:null;
+ }
+ async function signedPhotoURLs(links){
+  const originals=links.filter(link=>link.fotografias?.arquivo_caminho&&!link.fotografias.excluida_em);
+  const urlsByPath=new Map();
+  // One Supabase request per 100 photographs, not one full-resolution download per photograph.
+  for(let offset=0;offset<originals.length;offset+=100){
+   const group=originals.slice(offset,offset+100),paths=group.map(x=>x.fotografias.arquivo_caminho);
+   const response=await sb.storage.from('predio-legal-fotos').createSignedUrls(paths,3600);
+   if(response.error)throw response.error;
+   for(let i=0;i<group.length;i++){
+    const entry=response.data?.[i];
+    if(entry?.signedUrl)urlsByPath.set(paths[i],entry.signedUrl);
+    else console.warn('Sem URL para fotografia:',paths[i],entry?.error);
+   }
+  }
+  return urlsByPath;
+ }
+ async function prepareOriginalsForPDF(items,generation){
+  const originals=items.filter(item=>item.incluir&&item.source.arquivo_caminho);
+  if(!originals.length)return ()=>{};
+  const oldUrls=new Map(originals.map(item=>[item,item.url]));
+  const downloaded=[];
+  let next=0,completed=0;
+  const total=originals.length;
+  async function worker(){
+   while(next<originals.length){
+    const item=originals[next++];
+    if(generation!==revision)throw new Error('A geração do PDF foi interrompida.');
+    const blob=await check(sb.storage.from('predio-legal-fotos').download(item.source.arquivo_caminho));
+    if(generation!==revision)throw new Error('A geração do PDF foi interrompida.');
+    const url=URL.createObjectURL(blob);urls.add(url);downloaded.push(url);
+    item.url=url;
+    completed++;
+    if(completed===total||completed%3===0)
+     error({message:'Preparando imagens originais para o PDF: '+completed+' de '+total+'…'});
+   }
+  }
+  try{await Promise.all(Array.from({length:Math.min(4,total)},worker))}
+  catch(e){
+   for(const [item,url] of oldUrls)item.url=url;
+   for(const url of downloaded){URL.revokeObjectURL(url);urls.delete(url)}
+   throw e;
+  }
+  return ()=>{
+   for(const [item,url] of oldUrls)item.url=url;
+   for(const url of downloaded){URL.revokeObjectURL(url);urls.delete(url)}
+  };
  }
  async function start(albumId){
   if(busy)return;
@@ -65,15 +110,16 @@
     }catch(e){console.warn('Identificação do empreendimento indisponível',e)}
    }
    if(generation!==revision)return;
+   const signedURLs=demo?new Map():await signedPhotoURLs(links);
+   if(generation!==revision)return;
    const sectionNames=new Map(sections.map(x=>[x.id,x.nome]));
    state={album,id:null,demo,empreendimento,titulo:'Relatório fotográfico',
     descricao:'',layout:12,items:[]};
    for(const link of links){
     const f=link.fotografias;
     if(!f||f.excluida_em)continue;
-    let url;
-    try{url=await sourceURL(f)}catch(e){console.warn(e);continue}
-    if(generation!==revision){release();return}
+    const url=demoPhotoURL(f)||(f.arquivo_caminho?signedURLs.get(f.arquivo_caminho):null);
+    if(!url){console.warn('Fotografia sem URL disponível:',f.id);continue}
     state.items.push({
      fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:link.secao_id||null,
      secao_nome:sectionNames.get(link.secao_id)||'',
@@ -490,11 +536,13 @@
  }catch(e){error(e)}finally{busy=false}}
  async function exportPDF(){
   if(busy)return;
-  busy=true;const generation=revision;let print;
+  busy=true;const generation=revision;let print,restoreOriginals;
   try{
    if(!state.items.some(i=>i.incluir))throw new Error('Nenhuma fotografia disponível para o relatório.');
-   error({message:'Gerando PDF A4 sobre a lauda institucional…'});
+   error({message:'Preparando o PDF com fotografias originais…'});
    dialog.inert=true;
+   restoreOriginals=await prepareOriginalsForPDF(state.items,generation);
+   if(generation!==revision)return;
    print=document.createElement('div');
    print.style.cssText='position:fixed;left:-12000px;top:0;width:210mm;pointer-events:none;z-index:-1';
    document.body.append(print);prepareSheets(print);
@@ -600,7 +648,7 @@
    pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+'.pdf');
    error({message:'PDF A4 exportado com a lauda original e as fotografias do álbum.'});
   }catch(e){console.error(e);error(e)}
-  finally{print?.remove();dialog.inert=false;busy=false}
+  finally{print?.remove();restoreOriginals?.();dialog.inert=false;busy=false}
  }
  // The existing album remains the source; this adds only a report action.
  const albumContent=document.querySelector('#pl-album-content');
