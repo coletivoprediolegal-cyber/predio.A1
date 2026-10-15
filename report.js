@@ -93,7 +93,7 @@
    dialog.querySelector('button').onclick=close;error(e)
   }finally{busy=false}
  }
- async function close(){if(busy)return;if(!(await discard()))return;const changed=albumChanged,albumId=state?.album?.id;dialog.hidden=true;release();state=null;dirty=false;albumChanged=false;document.querySelector('#rf-print')?.remove();if(changed&&albumId)window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId}}));opener?.focus()}
+ async function close(){if(busy||reportWritePending)return;if(!(await discard()))return;cancelReportDrag();const changed=albumChanged,albumId=state?.album?.id;dialog.hidden=true;release();state=null;dirty=false;albumChanged=false;document.querySelector('#rf-print')?.remove();if(changed&&albumId)window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId}}));opener?.focus()}
  function options(selected){return core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' fotos por página</option>').join('')}
  let previewIndex=0,editFilter='all',editQuery='',editsVisible=30;
  function totalPages(){return core.paginate(state.items,state.layout).length}
@@ -258,6 +258,12 @@
   editsVisible=end;
   const more=dialog.querySelector('#rf-more');
   if(more){more.hidden=end>=visible.length;more.textContent='Mostrar mais fotos ('+(visible.length-end)+' restantes)'}
+ }
+ function cancelReportDrag(){
+  const g=photoDrag;
+  photoDrag=null;
+  if(g){clearTimeout(g.timer);g.ghost?.remove();g.row.classList.remove('rf-row-drag-source');try{g.handle.releasePointerCapture(g.pointerId)}catch(err){}}
+  if(scrollFrame){cancelAnimationFrame(scrollFrame);scrollFrame=0}
  }
  function startReportDrag(e){
   if(e.button!==0&&e.pointerType==='mouse'||photoDrag||reportWritePending)return;
