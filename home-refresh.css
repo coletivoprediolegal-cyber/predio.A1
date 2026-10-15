@@ -71,3 +71,27 @@ header .profile.pl-profile-seal{
 .pl-mascot-stage img{width:100%;height:100%;object-fit:cover;object-position:center}
 .pl-home-quote,.pl-home-quote *{font-family:'Instrument Sans',Arial,sans-serif!important;font-style:normal!important}
 @media(prefers-color-scheme:dark){.pl-mascot-stage{background:rgba(255,255,255,.035)}}
+
+/* Mascote como protagonista da página inicial: imagem integral, sem recortes. */
+.pl-mascot-stage{
+  display:flex!important;
+  width:100%;
+  height:clamp(420px,125vw,680px);
+  min-height:420px;
+  margin:8px auto 24px;
+  padding:0;
+  background:transparent!important;
+  overflow:visible;
+  align-items:center;
+  justify-content:center;
+}
+.pl-mascot-stage img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain!important;
+  object-position:center center;
+}
+@media(min-width:700px){
+ .pl-mascot-stage{height:clamp(500px,70vh,720px);margin:12px auto 30px}
+}
