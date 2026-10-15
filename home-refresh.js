@@ -67,7 +67,7 @@ function setup(){
  if(intro&&!intro.classList.contains('pl-home-intro')){
   intro.classList.add('pl-home-intro');
   const label=document.createElement('div');label.className='pl-home-quote-wrap';
-  const brow=document.createElement('div');brow.className='pl-home-eyebrow';brow.textContent='Um pensamento para hoje';
+  const brow=document.createElement('div');brow.className='pl-home-eyebrow';brow.textContent='';brow.hidden=true;
   const quote=document.getElementById('hero-text');
   quote.classList.add('pl-home-quote');
   const button=document.createElement('button');
@@ -85,25 +85,32 @@ function setup(){
   profile.setAttribute('title','Minha conta');
   profile.innerHTML='<span aria-hidden="true">PL</span>';
  }
- const jobSection=document.getElementById('jobs-list')?.closest('section.section');
- if(jobSection){
-  jobSection.classList.add('pl-home-work-section');
-  const heading=jobSection.querySelector('.section-title h2');
-  if(heading)heading.textContent='Em foco';
-  const link=jobSection.querySelector('.section-title .view');
-  if(link){link.textContent='Ver trabalhos ›';link.classList.add('pl-home-all-jobs')}
-  if(!jobSection.querySelector('.pl-home-work-description')){
-   const desc=document.createElement('p');desc.className='pl-home-work-description';desc.textContent='Seus trabalhos ao alcance de um toque.';
-   jobSection.querySelector('.section-title')?.after(desc);
-  }
+ const search=document.querySelector('.search');
+ if(search&&!document.getElementById('pl-mascot-stage')){
+  const stage=document.createElement('figure');stage.id='pl-mascot-stage';stage.className='pl-mascot-stage';
+  stage.setAttribute('aria-label','Mascote Prédio Legal trabalhando');search.after(stage);
  }
- document.getElementById('albums-list')?.closest('section.section')?.classList.add('pl-home-albums-section');
  applyQuote();
 }
-document.addEventListener('DOMContentLoaded',setup,{once:true});
-if(document.readyState!=='loading')setup();
-window.PLHome={refresh:applyQuote};
+
+const sceneFiles=["1000378919","1000378923","1000378924","1000378927","1000378930","1000378937","1000378940","1000378941","1000378947","1000378948","1000378949","1000378954","1000378955","1000378956","1000378957","1000378958","1000378959","1000378960","1000378961","1000378962","1000378963","1000378964"];
+const SCENE_PERIOD=30000;
+let currentSceneSlot=-1;
+function updateScene(){
+ const stage=document.getElementById('pl-mascot-stage');if(!stage)return;
+ const nowSlot=Math.floor(Date.now()/SCENE_PERIOD);
+ if(nowSlot===currentSceneSlot)return;
+ currentSceneSlot=nowSlot;
+ const index=((nowSlot%sceneFiles.length)+sceneFiles.length)%sceneFiles.length;
+ const next=new Image();next.decoding='async';next.alt='Mascote Prédio Legal trabalhando';
+ next.onload=()=>{if(currentSceneSlot===nowSlot){stage.replaceChildren(next);stage.classList.add('is-ready')}};
+ next.onerror=()=>{if(currentSceneSlot===nowSlot)stage.classList.remove('is-ready')};
+ next.src='assets/mascotes/'+sceneFiles[index]+'.webp';
+}
+document.addEventListener('DOMContentLoaded',()=>{setup();updateScene()},{once:true});
+if(document.readyState!=='loading'){setup();updateScene()}
+window.PLHome={refresh:applyQuote,refreshScene:updateScene};
 let prev=slot();
-setInterval(()=>{const next=slot();if(next!==prev){prev=next;override=0;applyQuote()}},60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){const next=slot();if(next!==prev){prev=next;override=0}applyQuote()}});
+setInterval(()=>{const next=slot();if(next!==prev){prev=next;override=0;applyQuote()}updateScene()},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){const next=slot();if(next!==prev){prev=next;override=0}applyQuote()}updateScene()});
 })();
