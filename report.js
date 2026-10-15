@@ -440,7 +440,7 @@
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
-    return '<figure class="'+cls+'" data-photo-number="'+escape(i.numero)+'"><div class="rf-photo"><img src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
+    return '<figure class="'+cls+'" data-photo-number="'+escape(i.numero)+'"><div class="rf-photo"><img crossorigin="anonymous" src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
      '<span class="rf-number">'+(featured?'★ ':'')+escape(String(i.numero).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
@@ -567,12 +567,12 @@
     error({message:'Gerando página '+(pageIndex+1)+' de '+reportPages.length+'…'});
     previewIndex=pageIndex;
     const items=reportPages[pageIndex].items;
-    restorePage=await prepareOriginalsForPDF(items,generation);
+    // Signed URLs point to the original files; reuse those already loaded by the
+    // preview instead of re-downloading 37 high-resolution photographs through JS.
     try{
      prepareSheets(print,false,true);
      const imgs=[...print.querySelectorAll('img')];
      for(const img of imgs){
-      if(img.src.startsWith('https:'))img.crossOrigin='anonymous';
       try{await img.decode()}
       catch(e){
        const photo=img.closest('.rf-cell')?.dataset.photoNumber;
