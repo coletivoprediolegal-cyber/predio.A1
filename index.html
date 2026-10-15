@@ -232,6 +232,30 @@ window.addEventListener('pl:report-album-updated',event=>{
 $('#pl-album-back').addEventListener('click',()=>switchTo('job'));
 $('#pl-lightbox-close').addEventListener('click',()=>{$('#pl-lightbox').hidden=true;$('#pl-lightbox-img').removeAttribute('src')});
 $('#pl-lightbox').addEventListener('click',e=>{if(e.target.id==='pl-lightbox')$('#pl-lightbox-close').click()});
+async function openProfessionalJob(id){
+ const job=professionalJobs.find(x=>x.id===id);
+ if(!job)return alert('Job não encontrado na sua lista autorizada.');
+ professionalJob=id;switchTo('job');
+ $('#pl-job-content').innerHTML='<p class="pl-empty">Carregando álbuns profissionais…</p>';
+ const {data:albums,error}=await window.plSupabase.from('albuns')
+  .select('id,titulo,assunto,data_vistoria').eq('job_principal_id',id)
+  .order('criado_em',{ascending:false});
+ if(error){$('#pl-job-content').innerHTML='<p class="pl-error">Não foi possível carregar os álbuns: '+esc(error.message)+'</p>';return}
+ $('#pl-job-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">JOB PROFISSIONAL · '+esc(job.cliente||'')+'</div>'+
+ '<h1>'+esc(job.titulo)+'</h1><div class="pl-meta">'+esc(job.empreendimento||'')+'</div></div>'+
+ '<div class="pl-pro-albums-header"><h2>Álbuns fotográficos</h2><button type="button" id="pl-professional-album-new">＋ Criar álbum</button></div>'+
+ '<div class="pl-pro-albums-list">'+((albums||[]).length?(albums||[]).map(a=>
+  '<button type="button" data-professional-album="'+esc(a.id)+'"><span style="margin:0;flex:1"><strong>'+esc(a.titulo)+'</strong>'+
+  (a.assunto?'<small style="display:block;color:#8f8170;margin-top:3px">'+esc(a.assunto)+'</small>':'')+'</span>'+
+  '<span>'+esc(a.data_vistoria?a.data_vistoria.split('-').reverse().join('/'):'Sem data')+' ›</span></button>'
+ ).join(''):'<p class="pl-empty">Nenhum álbum cadastrado neste job.</p>')+'</div>';
+ $('#pl-professional-album-new').onclick=()=>window.PLAlbumImport?.create(id,async albumId=>{
+  await openProfessionalJob(id);
+  await openAlbum(albumId,true);
+ });
+ $('#pl-job-content').querySelectorAll('[data-professional-album]').forEach(b=>
+  b.onclick=()=>openAlbum(b.dataset.professionalAlbum,true));
+}
 async function refreshAuth(){
 const sb=window.plSupabase,box=$('#pl-auth-state'),jobs=$('#pl-private-jobs');if(!sb){box.textContent='Serviço de autenticação indisponível.';return}
 const {data:{session},error}=await sb.auth.getSession();if(error){box.textContent='Não foi possível consultar a sessão.';return}
@@ -241,7 +265,9 @@ box.innerHTML='<p><strong>'+esc(email)+'</strong></p><p class="pl-meta">'+(pe?'N
 $('#pl-logout').addEventListener('click',async()=>{await sb.auth.signOut();refreshAuth()});
 if(pe||!profile?.ativo){jobs.innerHTML='<p class="pl-empty">Nenhum dado profissional liberado para esta conta.</p>';return}
 const {data:allowed,error:ae}=await sb.rpc('pl_meus_jobs');
-jobs.innerHTML='<section class="pl-block"><h2 class="pl-access-title">Meus jobs autorizados</h2>'+(ae?'<p class="pl-empty">Não foi possível carregar os jobs.</p>':(allowed||[]).length?(allowed||[]).map(j=>'<div class="pl-line"><strong>'+esc(j.titulo)+'</strong><span class="pl-meta">'+esc(j.cliente)+' · '+esc(j.status||'')+'</span></div>').join(''):'<p class="pl-empty">Nenhum job profissional autorizado.</p>')+'</section>';
+professionalJobs=Array.isArray(allowed)?allowed:[];
+jobs.innerHTML='<section class="pl-block"><h2 class="pl-access-title">Meus jobs autorizados</h2>'+(ae?'<p class="pl-empty">Não foi possível carregar os jobs.</p>':professionalJobs.length?professionalJobs.map(j=>'<button type="button" class="pl-professional-job-link" data-professional-job="'+esc(j.id)+'"><span><strong>'+esc(j.titulo)+'</strong><small>'+esc(j.cliente)+' · '+esc(j.empreendimento||'')+'</small></span><span>›</span></button>').join(''):'<p class="pl-empty">Nenhum job profissional autorizado.</p>')+'</section>';
+jobs.querySelectorAll('[data-professional-job]').forEach(button=>button.onclick=()=>openProfessionalJob(button.dataset.professionalJob));
 }
 window.plSupabase?.auth.onAuthStateChange((_event,session)=>{updateProfileIcon(session);if(current==='access')setTimeout(refreshAuth,0)});
 function updateProfileIcon(session){const button=document.querySelector('header .profile');if(!button)return;const url=session?.user?.user_metadata?.avatar_url||session?.user?.user_metadata?.picture;button.replaceChildren();if(url&&/^https:\/\//i.test(url)){const img=document.createElement('img');img.src=url;img.alt='';img.referrerPolicy='no-referrer';img.style.cssText='width:100%;height:100%;border-radius:50%;object-fit:cover';img.onerror=()=>{img.remove();button.textContent='◯'};button.append(img)}else{button.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-7 8-7s8 2 8 7"/></svg>'}button.setAttribute('aria-label',session?'Minha conta':'Entrar com Google')}
@@ -253,7 +279,7 @@ if(error){$('#pl-client-list').innerHTML='<p class="pl-error">Erro ao consultar 
 directory=Array.isArray(data)?data:[];renderList();
 }
 $('#pl-client-search').addEventListener('input',renderList);
-$('#pl-detail-back').addEventListener('click',()=>switchTo('clients'));$('#pl-job-back').addEventListener('click',()=>switchTo('detail'));
+$('#pl-detail-back').addEventListener('click',()=>switchTo('clients'));$('#pl-job-back').addEventListener('click',()=>switchTo(professionalJob?'access':'detail'));
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
 if(b.dataset.action==='Clientes'){switchTo('clients');return}
 if(b.dataset.action==='Início'){switchTo('home');return}
@@ -282,4 +308,4 @@ load();
 .pl-photo-card.pl-selected{outline:3px solid #24477c;outline-offset:-3px}
 .pl-photo-card.pl-selected .pl-photo-preview:after{content:'✓';position:absolute;top:5px;left:5px;border-radius:50%;width:22px;height:22px;background:#24477c;color:white;display:grid;place-items:center}
 .pl-photo-card[hidden]{display:none!important}
- .pl-photo-actions[hidden]{display:none!important}.pl-photo-card.pl-organizing .pl-photo-preview{touch-action:none;-webkit-user-select:none;user-select:none}.pl-order-buttons{display:flex}.pl-drag-source{opacity:.32;outline:2px dashed #26354b;outline-offset:-2px}.pl-drag-ghost{position:fixed!important;top:0;left:0;z-index:9999;pointer-events:none!important;opacity:.95;box-shadow:0 12px 25px rgba(19,32,57,.23);border-radius:14px;overflow:hidden;will-change:transform}.pl-drag-ghost .pl-photo-preview{height:100%}.pl-drag-ghost .pl-photo-actions{display:none!important} </style><script src="album-sections.js?v=14" defer></script></body></html>
+ .pl-photo-actions[hidden]{display:none!important}.pl-photo-card.pl-organizing .pl-photo-preview{touch-action:none;-webkit-user-select:none;user-select:none}.pl-order-buttons{display:flex}.pl-drag-source{opacity:.32;outline:2px dashed #26354b;outline-offset:-2px}.pl-drag-ghost{position:fixed!important;top:0;left:0;z-index:9999;pointer-events:none!important;opacity:.95;box-shadow:0 12px 25px rgba(19,32,57,.23);border-radius:14px;overflow:hidden;will-change:transform}.pl-drag-ghost .pl-photo-preview{height:100%}.pl-drag-ghost .pl-photo-actions{display:none!important} </style><link rel="stylesheet" href="album-import.css?v=1"><script src="album-sections.js?v=15" defer></script><script src="album-import.js?v=1" defer></script></body></html>
