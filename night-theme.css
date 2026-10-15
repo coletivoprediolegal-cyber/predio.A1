@@ -80,9 +80,9 @@
   .pl-photo-card.pl-selected{outline-color:#ceb08c}
   .pl-photo-card.pl-selected .pl-photo-preview:after{background:#d09d68;color:#0c1b31}
   .pl-drag-ghost{box-shadow:0 15px 32px rgba(0,0,0,.4)}
-  nav{background:#0c1d33!important;border-top:1px solid var(--pl-night-border)!important}
-  nav button{color:#c2beb8!important}
-  nav button.active{color:#d5a06a!important}
+  body > nav{background:#0c1d33!important;border-top:1px solid var(--pl-night-border)!important}
+  body > nav button{color:#c2beb8!important}
+  body > nav button.active{color:#d5a06a!important}
   .notice{background:#26384e;color:#f8f4ee}
   /* Componentes sobrepostos: manter contraste de campos e botões. */
   #pl-import-overlay .pl-import-panel{background:#14263d;color:#f3efe8;border-color:#3b4a60}
@@ -104,7 +104,7 @@
   .rf-source,.rf-editor-tools label,.rf-advanced>summary,.rf-advanced-inner>p{color:#cac6c0}
   .rf-editor-tools select,.rf-edit-tools select,.rf-edit-tools input{background:#263a53;color:#f5f1eb;border-color:#51647d}
   .rf-preview{background:#1d2f45}
-  .rf-sheet,.rf-sheet *{color:initial}
+  .rf-sheet{color:#26354b;color-scheme:light}
   .rf-advanced,.rf-preview-area,.rf-row{border-color:var(--pl-night-border)}
   .rf-row .rf-row-line [data-edit-toggle],.rf-row-actions .rf-edit-link{color:#dfd8cd}
 }
