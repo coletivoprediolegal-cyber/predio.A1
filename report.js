@@ -113,7 +113,7 @@
    '<span id="rf-preview-count"></span><button id="rf-page-next" type="button" aria-label="Próxima página">›</button></div></div>'+
    '<div class="rf-preview" aria-label="Prévia da página selecionada"></div></section>'+
    '<details class="rf-advanced" id="rf-advanced"><summary>Ajustes opcionais <span>Fotos e observações</span></summary>'+
-   '<div class="rf-advanced-inner"><p>O relatório já utiliza a ordem, a seleção e as observações do álbum. Edite aqui somente exceções.</p>'+
+   '<div class="rf-advanced-inner"><p>Ordem, destaques e anomalias são salvos no álbum. '+reorderNote+' As observações podem ser ajustadas aqui, se necessário.</p>'+
    (!state.demo?'<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label>'+
    '<div class="rf-advanced-save"><button id="rf-save" type="button">Salvar relatório</button><button id="rf-load" type="button">Abrir relatório salvo</button></div></div>':'')+
    '<div class="rf-edit-tools"><label>Exibir <select id="rf-edit-filter"><option value="all">Todas as fotos</option><option value="highlight">Destaques</option>'+
@@ -129,7 +129,7 @@
   dialog.querySelector('#rf-advanced').addEventListener('toggle',e=>{if(e.target.open)rows()});
   dialog.querySelector('#rf-edit-filter').onchange=e=>{editFilter=e.target.value;editsVisible=30;rows()};
   dialog.querySelector('#rf-photo-search').oninput=e=>{editQuery=e.target.value.trim().toLowerCase();editsVisible=30;rows()};
-  dialog.querySelector('#rf-more').onclick=()=>{editsVisible+=30;rows()};
+  dialog.querySelector('#rf-more').onclick=()=>{appendMoreRows()};
   if(!state.demo){
    dialog.querySelector('#rf-title').oninput=e=>{state.titulo=e.target.value;dirty=true};
    dialog.querySelector('#rf-save').onclick=save;
@@ -154,47 +154,213 @@
    return !editQuery||String(item.numero).includes(editQuery)||(item.legenda||'').toLowerCase().includes(editQuery);
   });
  }
+ let reportWritePending=false,photoDrag=null,scrollFrame=0;
+ const reorderNote='Arraste pelo ícone à esquerda. A nova ordem também será salva no álbum.';
+ function nextAnomaly(current){return current==='amarela'?'vermelha':current==='vermelha'?null:'amarela'}
+ function anomalyLabel(level){
+  return level==='amarela'?'Anomalia amarela; tocar para vermelha':
+         level==='vermelha'?'Anomalia vermelha; tocar para remover':'Sem anomalia; tocar para marcar';
+ }
+ async function editAlbumPhoto(item,action){
+  if(reportWritePending)return;
+  const original=action==='anomalia'?item.source.nivel_anomalia:!!item.destaque_no_relatorio;
+  const value=action==='anomalia'?nextAnomaly(original):!original;
+  reportWritePending=true;
+  if(action==='anomalia')item.source.nivel_anomalia=value;
+  else{item.destaque_no_relatorio=value;item.source.destaque=value}
+  preview();rows();
+  try{
+   const payload=action==='anomalia'?{id:item.fotografia_id,nivel:value}:{id:item.fotografia_id,destaque:value};
+   const result=await sb.rpc('pl_report_album_edit',{p_album_id:state.album.id,p_action:action,p_payload:payload});
+   if(result.error||!result.data?.ok)throw result.error||new Error('Não foi possível confirmar a alteração');
+   window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId:state.album.id,action}}));
+   error({message:'Classificação atualizada no álbum.'});
+  }catch(e){
+   if(action==='anomalia')item.source.nivel_anomalia=original;
+   else{item.destaque_no_relatorio=original;item.source.destaque=original}
+   error({message:'Não foi possível salvar a classificação: '+(e.message||e)});
+  }finally{reportWritePending=false;preview();rows()}
+ }
+ function filteredRows(){
+  const visible=filteredItems();
+  return {visible,shown:visible.slice(0,editsVisible)};
+ }
+ function rowMarkup(item,i){
+  const notes=!!item.legenda?.trim(),highlight=!!item.destaque_no_relatorio;
+  const anomaly=item.source.nivel_anomalia||null;
+  const anomalyCls=anomaly==='vermelha'?'rf-anomaly-red':anomaly==='amarela'?'rf-anomaly-yellow':'';
+  const info=notes?'▤ Nota':'';
+  return '<article class="rf-row" data-index="'+i+'" data-photo-id="'+escape(item.fotografia_id)+'">'+
+   '<img src="'+escape(item.url)+'" loading="lazy" alt="">'+
+   '<div class="rf-row-body"><div class="rf-row-line">'+
+    '<button type="button" class="rf-drag-handle" data-drag-handle title="Segure e arraste para mover a foto" aria-label="Arrastar foto '+escape(item.numero)+'">⠿</button>'+
+    '<label class="rf-inclusion"><input type="checkbox" data-field="incluir" '+(item.incluir?'checked':'')+'> Foto '+escape(String(item.numero).padStart(2,'0'))+'</label>'+
+    '<span class="rf-row-tags">'+info+'</span>'+
+    '<button type="button" class="rf-mark rf-highlight-mark'+(highlight?' is-marked':'')+'" data-album-action="destaque"'+
+    ' title="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-label="'+(highlight?'Retirar destaque':'Marcar como destaque')+'" aria-pressed="'+highlight+'">★</button>'+
+    '<button type="button" class="rf-mark rf-anomaly-mark '+anomalyCls+'" data-album-action="anomalia"'+
+    ' title="'+anomalyLabel(anomaly)+'" aria-label="'+anomalyLabel(anomaly)+'">⚠</button>'+
+    '<button type="button" data-edit-toggle aria-expanded="false">Editar</button></div>'+
+    '<div class="rf-row-details" hidden><label>Observação desta foto<textarea maxlength="1000" data-field="legenda">'+escape(item.legenda)+'</textarea></label>'+
+    '</div></div></article>';
+ }
+ function bindRow(row){
+  const index=Number(row.dataset.index);
+  row.querySelector('[data-edit-toggle]').onclick=e=>{
+   const details=row.querySelector('.rf-row-details');
+   details.hidden=!details.hidden;
+   e.currentTarget.setAttribute('aria-expanded',String(!details.hidden));
+   e.currentTarget.textContent=details.hidden?'Editar':'Fechar';
+  };
+  row.querySelector('[data-field="incluir"]').onchange=e=>{
+   state.items[index].incluir=e.target.checked;
+   dirty=true;preview();
+   if(editFilter==='hidden')rows();
+  };
+  row.querySelector('[data-field="legenda"]').onchange=e=>{
+   state.items[index].legenda=e.target.value;
+   dirty=true;preview();
+  };
+  row.querySelectorAll('[data-album-action]').forEach(button=>button.onclick=()=>editAlbumPhoto(state.items[index],button.dataset.albumAction));
+  row.querySelector('[data-drag-handle]').addEventListener('pointerdown',startReportDrag);
+  row.querySelector('img').draggable=false;
+ }
  function rows(){
   const target=dialog.querySelector('#rf-items');
-  if(!target||!dialog.querySelector('#rf-advanced')?.open)return;
-  const filtered=filteredItems();
-  target.innerHTML=filtered.slice(0,editsVisible).map(({item:i,index})=>{
-   const info=[i.destaque_no_relatorio?'★ Destaque':'',i.source.nivel_anomalia?'⚠ Anomalia':'',i.legenda?.trim()?'Observação':''].filter(Boolean).join(' · ');
-   return '<article class="rf-row" data-index="'+index+'"><img src="'+escape(i.url)+'" loading="lazy" alt="">'+
-    '<div class="rf-row-body"><div class="rf-row-line"><label class="rf-inclusion"><input type="checkbox" data-field="incluir" '+(i.incluir?'checked':'')+'> Foto '+escape(String(i.numero).padStart(2,'0'))+'</label>'+
-    '<span class="rf-row-tags">'+escape(info)+'</span><button type="button" data-edit-toggle aria-expanded="false">Editar</button></div>'+
-    '<div class="rf-row-details" hidden><label>Observação desta foto<textarea maxlength="1000" data-field="legenda">'+escape(i.legenda)+'</textarea></label>'+
-    '<div class="rf-row-order"><button data-move="-1" type="button" '+(!index?'disabled':'')+' aria-label="Mover foto para cima">↑</button>'+
-    '<button data-move="1" type="button" '+(index===state.items.length-1?'disabled':'')+' aria-label="Mover foto para baixo">↓</button>'+
-    '<span>Ordem do relatório</span></div></div></div></article>'
-  }).join('')||'<p class="rf-empty-filter">Nenhuma foto encontrada.</p>';
+  if(!target||!dialog.querySelector('#rf-advanced')?.open||photoDrag)return;
+  const {visible,shown}=filteredRows();
+  target.innerHTML=shown.map(({item,index})=>rowMarkup(item,index)).join('')||
+   '<p class="rf-empty-filter">Nenhuma foto encontrada.</p>';
+  target.querySelectorAll('.rf-row').forEach(bindRow);
   const more=dialog.querySelector('#rf-more');
-  if(more){more.hidden=filtered.length<=editsVisible;more.textContent='Mostrar mais fotos ('+Math.max(0,filtered.length-editsVisible)+' restantes)'}
-  target.querySelectorAll('.rf-row').forEach(row=>{
-   const index=Number(row.dataset.index);
-   row.querySelector('[data-edit-toggle]').onclick=e=>{
-    const details=row.querySelector('.rf-row-details');
-    details.hidden=!details.hidden;
-    e.currentTarget.setAttribute('aria-expanded',String(!details.hidden));
-    e.currentTarget.textContent=details.hidden?'Editar':'Fechar';
-   };
-   row.querySelector('[data-field="incluir"]').onchange=e=>{
-    state.items[index].incluir=e.target.checked;
-    dirty=true;preview();
-    if(editFilter==='hidden')rows();
-   };
-   row.querySelector('[data-field="legenda"]').onchange=e=>{
-    state.items[index].legenda=e.target.value;
-    dirty=true;preview();
-   };
-   row.querySelectorAll('[data-move]').forEach(button=>button.onclick=()=>{
-    const next=index+Number(button.dataset.move);
-    if(next<0||next>=state.items.length)return;
-    [state.items[index],state.items[next]]=[state.items[next],state.items[index]];
-    dirty=true;rows();preview();
-   });
-  });
+  if(more){
+   more.hidden=visible.length<=editsVisible;
+   more.textContent='Mostrar mais fotos ('+Math.max(0,visible.length-editsVisible)+' restantes)';
+  }
  }
+ function appendMoreRows(){
+  const target=dialog.querySelector('#rf-items');
+  if(!target)return;
+  const {visible}=filteredRows();
+  const start=editsVisible;
+  const end=Math.min(start+30,visible.length);
+  if(end<=start)return;
+  const wrapper=document.createElement('div');
+  wrapper.innerHTML=visible.slice(start,end).map(({item,index})=>rowMarkup(item,index)).join('');
+  while(wrapper.firstElementChild){
+   const row=wrapper.firstElementChild;
+   target.appendChild(row);
+   bindRow(row);
+  }
+  editsVisible=end;
+  const more=dialog.querySelector('#rf-more');
+  if(more){more.hidden=end>=visible.length;more.textContent='Mostrar mais fotos ('+(visible.length-end)+' restantes)'}
+ }
+ function startReportDrag(e){
+  if(e.button!==0&&e.pointerType==='mouse'||photoDrag||reportWritePending)return;
+  const row=e.currentTarget.closest('.rf-row');
+  if(!row)return;
+  e.preventDefault();
+  const g={
+   pointerId:e.pointerId,row,handle:e.currentTarget,startX:e.clientX,startY:e.clientY,
+   x:e.clientX,y:e.clientY,active:false,changed:false,ghost:null,timer:null
+  };
+  photoDrag=g;
+  try{g.handle.setPointerCapture(e.pointerId)}catch(err){}
+  g.timer=setTimeout(()=>{if(photoDrag===g)activateReportDrag(g)},125);
+ }
+ function activateReportDrag(g){
+  if(g.active||!g.row.isConnected)return;
+  g.active=true;
+  const rect=g.row.getBoundingClientRect();
+  const ghost=g.row.cloneNode(true);
+  ghost.classList.add('rf-row-ghost');
+  ghost.removeAttribute('data-index');ghost.removeAttribute('data-photo-id');
+  ghost.style.left=rect.left+'px';ghost.style.top=rect.top+'px';ghost.style.width=rect.width+'px';
+  ghost.style.height=rect.height+'px';ghost.style.transform='translate3d(0,0,0)';
+  g.rect=rect;g.ghost=ghost;document.body.append(ghost);
+  g.row.classList.add('rf-row-drag-source');
+  if(navigator.vibrate)try{navigator.vibrate(12)}catch(err){}
+  autoScrollReport();
+ }
+ function autoScrollReport(){
+  if(scrollFrame)cancelAnimationFrame(scrollFrame);
+  function step(){
+   const g=photoDrag;
+   if(!g||!g.active){scrollFrame=0;return}
+   const edge=95,windowHeight=window.innerHeight;
+   let velocity=0;
+   if(g.y<edge)velocity=-Math.min(22,(edge-g.y)/3);
+   else if(g.y>windowHeight-edge)velocity=Math.min(22,(g.y-(windowHeight-edge))/3);
+   if(velocity)dialog.scrollTop+=velocity;
+   const target=document.elementFromPoint(Math.max(0,Math.min(window.innerWidth-1,g.x)),Math.max(0,Math.min(window.innerHeight-1,g.y)))?.closest('.rf-row');
+   if(target&&target!==g.row&&target.parentElement===g.row.parentElement){
+    const rect=target.getBoundingClientRect();
+    if(g.y>=rect.top+rect.height/2)target.after(g.row);
+    else target.before(g.row);
+    g.changed=true;
+   }
+   // When reaching the bottom, reveal another batch while keeping the dragged node.
+   const list=dialog.querySelector('#rf-items');
+   const last=list?.lastElementChild;
+   if(last?.classList.contains('rf-row')&&editsVisible<filteredItems().length&&last.getBoundingClientRect().bottom<windowHeight+90){
+    appendMoreRows();
+   }
+   scrollFrame=requestAnimationFrame(step);
+  }
+  scrollFrame=requestAnimationFrame(step);
+ }
+ function moveReportGhost(g,x,y){
+  if(!g.ghost)return;
+  g.ghost.style.transform='translate3d('+(x-g.startX)+'px,'+(y-g.startY)+'px,0)';
+ }
+ function onReportDragMove(e){
+  const g=photoDrag;
+  if(!g||g.pointerId!==e.pointerId)return;
+  g.x=e.clientX;g.y=e.clientY;
+  if(!g.active){
+   if(Math.hypot(e.clientX-g.startX,e.clientY-g.startY)>5){
+    clearTimeout(g.timer);activateReportDrag(g)
+   }
+  }
+  if(g.active){e.preventDefault();moveReportGhost(g,g.x,g.y)}
+ }
+ async function commitReportDrag(e,cancel=false){
+  const g=photoDrag;
+  if(!g||g.pointerId!==e.pointerId)return;
+  photoDrag=null;clearTimeout(g.timer);
+  if(scrollFrame){cancelAnimationFrame(scrollFrame);scrollFrame=0}
+  g.ghost?.remove();g.row.classList.remove('rf-row-drag-source');
+  try{g.handle.releasePointerCapture(e.pointerId)}catch(err){}
+  if(!g.active||cancel||!g.changed){rows();return}
+  const list=dialog.querySelector('#rf-items');
+  const indices=[...list.querySelectorAll('.rf-row')].map(row=>Number(row.dataset.index));
+  const sorted=[...indices].sort((a,b)=>a-b);
+  if(new Set(indices).size!==indices.length){rows();return}
+  const original=state.items.slice();
+  sorted.forEach((slot,n)=>{state.items[slot]=original[indices[n]]});
+  const oldNumbers=[...original].map(item=>item.numero);
+  reportWritePending=true;preview();rows();
+  try{
+   const result=await sb.rpc('pl_report_album_edit',{
+    p_album_id:state.album.id,p_action:'reorder',
+    p_payload:{ids:state.items.map(item=>item.fotografia_id)}
+   });
+   if(result.error||!result.data?.ok)throw result.error||new Error('Falha ao gravar a ordem');
+   // Maintain the album's position-based numbering, including gaps from deleted photos.
+   const positions=oldNumbers.slice().sort((a,b)=>Number(a)-Number(b));
+   state.items.forEach((item,idx)=>{item.numero=positions[idx]});
+   if(state.id)dirty=true;
+   window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId:state.album.id,action:'reorder'}}));
+   error({message:'Nova ordem salva no álbum.'});
+  }catch(err){
+   state.items=original;
+   error({message:'A ordem anterior foi restaurada: '+(err.message||err)});
+  }finally{reportWritePending=false;rows();preview()}
+ }
+ document.addEventListener('pointermove',onReportDragMove,{passive:false});
+ document.addEventListener('pointerup',e=>{commitReportDrag(e).catch(console.error)});
+ document.addEventListener('pointercancel',e=>{commitReportDrag(e,true).catch(console.error)});
  function sheets(previewOnly=false){
   const pages=core.paginate(state.items,state.layout);
   return pages.map((p,ix)=>{
