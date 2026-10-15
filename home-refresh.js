@@ -94,22 +94,37 @@ function setup(){
 }
 
 const sceneFiles=["1000378919","1000378923","1000378924","1000378927","1000378930","1000378937","1000378940","1000378941","1000378947","1000378948","1000378949","1000378954","1000378955","1000378956","1000378957","1000378958","1000378959","1000378960","1000378961","1000378962","1000378963","1000378964"];
-const SCENE_PERIOD=30000;
+const SCENE_PERIOD=THREE_HOURS;
 let currentSceneSlot=-1;
+function fallbackScene(stage,nowSlot){
+ // Reuse photos already displayed by the app until mascot assets are deployed.
+ const sources=[...document.querySelectorAll('#jobs-list img,#albums-list img')]
+  .map(img=>img.currentSrc||img.src).filter(url=>/^https:\/\//.test(url));
+ if(!sources.length){
+  stage.classList.add('is-ready');
+  stage.replaceChildren();
+  return;
+ }
+ const image=new Image();image.decoding='async';image.alt='Fotografia de trabalho do Prédio Legal';
+ image.src=sources[((nowSlot%sources.length)+sources.length)%sources.length];
+ image.onload=()=>{if(currentSceneSlot===nowSlot){stage.replaceChildren(image);stage.classList.add('is-ready')}};
+}
 function updateScene(){
  const stage=document.getElementById('pl-mascot-stage');if(!stage)return;
  const nowSlot=Math.floor(Date.now()/SCENE_PERIOD);
- if(nowSlot===currentSceneSlot)return;
+ if(nowSlot===currentSceneSlot&&stage.querySelector('img'))return;
  currentSceneSlot=nowSlot;
  const index=((nowSlot%sceneFiles.length)+sceneFiles.length)%sceneFiles.length;
  const next=new Image();next.decoding='async';next.alt='Mascote Prédio Legal trabalhando';
  next.onload=()=>{if(currentSceneSlot===nowSlot){stage.replaceChildren(next);stage.classList.add('is-ready')}};
- next.onerror=()=>{if(currentSceneSlot===nowSlot)stage.classList.remove('is-ready')};
+ next.onerror=()=>{if(currentSceneSlot===nowSlot)fallbackScene(stage,nowSlot)};
  next.src='assets/mascotes/'+sceneFiles[index]+'.webp';
 }
+
 document.addEventListener('DOMContentLoaded',()=>{setup();updateScene()},{once:true});
 if(document.readyState!=='loading'){setup();updateScene()}
 window.PLHome={refresh:applyQuote,refreshScene:updateScene};
+window.addEventListener('pl:home-data-loaded',()=>updateScene());
 let prev=slot();
 setInterval(()=>{const next=slot();if(next!==prev){prev=next;override=0;applyQuote()}updateScene()},1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){const next=slot();if(next!==prev){prev=next;override=0}applyQuote()}updateScene()});
