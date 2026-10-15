@@ -4,6 +4,7 @@
  const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
+ let albumChanged=false;
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
  function error(e){const box=dialog.querySelector('.rf-message');if(box)box.textContent=e.message||String(e)}
@@ -28,6 +29,7 @@
   if(busy)return;
   if(!(await discard()))return;
   const generation=++revision;
+  albumChanged=false;
   opener=document.activeElement;dialog.hidden=false;
   dialog.innerHTML='<p>Preparando relatório a partir da organização do álbum…</p>';
   busy=true;release();
@@ -91,7 +93,7 @@
    dialog.querySelector('button').onclick=close;error(e)
   }finally{busy=false}
  }
- async function close(){if(busy)return;if(!(await discard()))return;dialog.hidden=true;release();state=null;dirty=false;document.querySelector('#rf-print')?.remove();opener?.focus()}
+ async function close(){if(busy)return;if(!(await discard()))return;const changed=albumChanged,albumId=state?.album?.id;dialog.hidden=true;release();state=null;dirty=false;albumChanged=false;document.querySelector('#rf-print')?.remove();if(changed&&albumId)window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId}}));opener?.focus()}
  function options(selected){return core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' fotos por página</option>').join('')}
  let previewIndex=0,editFilter='all',editQuery='',editsVisible=30;
  function totalPages(){return core.paginate(state.items,state.layout).length}
@@ -172,7 +174,7 @@
    const payload=action==='anomalia'?{id:item.fotografia_id,nivel:value}:{id:item.fotografia_id,destaque:value};
    const result=await sb.rpc('pl_report_album_edit',{p_album_id:state.album.id,p_action:action,p_payload:payload});
    if(result.error||!result.data?.ok)throw result.error||new Error('Não foi possível confirmar a alteração');
-   window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId:state.album.id,action}}));
+   albumChanged=true;
    error({message:''});
   }catch(e){
    if(action==='anomalia')item.source.nivel_anomalia=original;
@@ -353,7 +355,7 @@
    const positions=oldNumbers.slice().sort((a,b)=>Number(a)-Number(b));
    state.items.forEach((item,idx)=>{item.numero=positions[idx]});
    if(state.id)dirty=true;
-   window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId:state.album.id,action:'reorder'}}));
+   albumChanged=true;
    error({message:''});
   }catch(err){
    state.items=original;
