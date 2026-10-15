@@ -49,15 +49,16 @@
  }
  function mimeType(file){
   const ext=(file.name.split('.').pop()||'').toLowerCase();
-  if(['jpg','jpeg'].includes(ext))return{extension:ext,mime:'image/jpeg'};
-  if(ext==='png')return{extension:ext,mime:'image/png'};
-  if(ext==='webp')return{extension:ext,mime:'image/webp'};
-  if(ext==='heic')return{extension:ext,mime:'image/heic'};
-  if(ext==='heif')return{extension:ext,mime:'image/heif'};
-  return null;
+  const byExtension={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',heif:'image/heif'};
+  const byMime={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic','image/heif':'heif'};
+  const given=String(file.type||'').split(';')[0].toLowerCase();
+  const mime=byExtension[ext]||given;
+  if(!byMime[mime])return null;
+  return {extension:byExtension[ext]===mime?ext:byMime[mime],mime};
  }
- async function pickDevicePhotos(albumId,onImported){
-  try{await admin()}catch(e){alert(e.message);return}
+ function pickDevicePhotos(albumId,onImported){
+  // A autorização já foi validada em pickPhotos. O seletor precisa abrir
+  // diretamente no gesto do usuário, sem um await que interrompa o clique no Android.
   const input=document.createElement('input');
   input.type='file';input.accept='image/*';
   input.multiple=true;
@@ -70,10 +71,12 @@
    selectedAlbum=albumId;afterImport=onImported;
    uploadFiles(files).catch(e=>{console.error('Importação:',e);alert('Erro na importação: '+e.message)});
   };
+  input.addEventListener('cancel',()=>input.remove(),{once:true});
   input.click();
  }
  async function uploadFiles(files){
   if(processing)return;
+  try{await admin()}catch(e){alert(e.message);return}
   show();processing=true;abort=false;
   let saved=0,failed=0,withCapture=0,withoutCapture=0;
   const maxMB=50;
@@ -155,14 +158,20 @@
   try{await admin()}catch(e){alert(e.message);return}
   pickerAlbum=albumId;pickerCallback=onImported||null;pickerPolling=false;pickerStopped=false;show();
   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Google Fotos</h2>'+
-   '<p class="pl-import-description">Escolha várias fotografias no seletor oficial do Google. Elas serão copiadas para este álbum do Prédio Legal, sem apagar os originais.</p>'+
-   '<p class="pl-import-status" role="status">Abrindo seletor…</p>'+
-   '<div class="pl-import-actions"><button class="pl-import-secondary" id="pl-google-consent">Autorizar Google Fotos</button><button class="pl-import-secondary" id="pl-google-cancel">Cancelar</button></div>';
+   '<p class="pl-import-description">A conexão direta exige que sua conta esteja cadastrada como testadora no Google Cloud enquanto o aplicativo não estiver publicado e verificado.</p>'+
+   '<p class="pl-import-status" role="status">Verificando a autorização disponível…</p>'+
+   '<div class="pl-import-actions"><button class="pl-import-primary" id="pl-google-device">Selecionar pelo celular</button>'+
+   '<button class="pl-import-secondary" id="pl-google-consent">Autorizar conexão direta</button>'+
+   '<button class="pl-import-secondary" id="pl-google-cancel">Cancelar</button></div>';
   content.querySelector('#pl-google-cancel').onclick=()=>{pickerPolling=false;close()};
+  content.querySelector('#pl-google-device').onclick=()=>{pickerPolling=false;close();pickDevicePhotos(albumId,onImported)};
   content.querySelector('#pl-google-consent').onclick=async()=>{try{await googleConsent()}catch(e){googleMessage(e.message,true)}};
   let result;
   try{result=await googleApi('create')}
-  catch(e){googleMessage(e.message+' Se ainda não autorizou a seleção, toque em “Autorizar Google Fotos”.',true);return}
+  catch(e){
+   googleMessage('A integração direta ainda não está autorizada para esta conta. Você já pode importar pelo seletor do celular. Para liberar a conexão direta, cadastre a conta como testadora no Google Cloud → Google Auth Platform → Público-alvo (Audience). Detalhe: '+e.message,true);
+   return;
+  }
   if(!result?.id||!result?.pickerUri){googleMessage('O Google não retornou uma sessão de seleção.',true);return}
   pickerSession=result.id;pickerPolling=true;
   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Selecionar no Google Fotos</h2>'+
@@ -300,11 +309,12 @@
   try{await admin()}catch(e){alert(e.message);return}
   show();pickerPolling=false;
   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Adicionar fotografias</h2>'+
-   '<p class="pl-import-description">Selecione muitas imagens de uma só vez. Não é necessário inseri-las individualmente.</p>'+
-   '<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-from-google">Google Fotos</button>'+
-   '<button type="button" class="pl-import-secondary" id="pl-from-device">Do dispositivo</button></div>';
-  content.querySelector('#pl-from-google').onclick=()=>googlePhotos(albumId,onImported);
+   '<p class="pl-import-description">Selecione várias fotos no celular. O seletor do Android também pode mostrar fotos da nuvem do Google Fotos, se essa opção estiver habilitada no aparelho.</p>'+
+   '<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-from-device">Selecionar fotos no celular</button></div>'+
+   '<div class="pl-import-alternate"><button type="button" id="pl-from-google">Conexão direta com Google Fotos (em testes) ›</button>'+
+   '<small>Essa conexão pede uma autorização extra do Google, indisponível para contas não cadastradas como testadoras.</small></div>';
   content.querySelector('#pl-from-device').onclick=()=>{close();pickDevicePhotos(albumId,onImported)};
+  content.querySelector('#pl-from-google').onclick=()=>googlePhotos(albumId,onImported);
  }
  // Retomar o álbum demonstrativo depois do login exigido para importar fotos reais.
  sb.auth.getSession().then(({data})=>{
