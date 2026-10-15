@@ -100,7 +100,28 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[ch]));
 const money=v=>v==null?'Não informado':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v));
 let directory=[],current='home',professionalJob=null,professionalJobs=[];
+const PL_ROUTE_KEY='pl-last-workspace-route-v1';
+let plRestoringRoute=false,plRouteRestored=false,plCurrentJob=null;
+function saveRoute(route){
+ if(plRestoringRoute)return;
+ try{sessionStorage.setItem(PL_ROUTE_KEY,JSON.stringify(route))}catch(e){console.warn('Não foi possível salvar a tela atual',e)}
+}
+function savedRoute(){
+ try{
+  const route=JSON.parse(sessionStorage.getItem(PL_ROUTE_KEY)||'null');
+  if(!route||!['home','clients','detail','job','album','access','more'].includes(route.page))return null;
+  return route;
+ }catch(e){return null}
+}
 function switchTo(page){
+ if(!plRestoringRoute){
+  const route={page};
+  if(page==='detail')route.clientId=activeClient?.id||null;
+  if(page==='job'){route.jobId=professionalJob||plCurrentJob;route.professional=!!professionalJob;route.clientId=activeClient?.id||null}
+  if(page==='album'){route.albumId=albumAtual;route.professional=albumProfessional;
+    route.jobId=professionalJob||plCurrentJob;route.clientId=activeClient?.id||null}
+  saveRoute(route);
+ }
 current=page;$('.container:not(.pl-screen)').style.display=page==='home'?'':'none';
 $('#pl-clients').classList.toggle('visible',page==='clients');
 $('#pl-detail').classList.toggle('visible',page==='detail');$('#pl-job').classList.toggle('visible',page==='job');$('#pl-album').classList.toggle('visible',page==='album');$('#pl-access').classList.toggle('visible',page==='access');$('#pl-more').classList.toggle('visible',page==='more');
@@ -116,6 +137,7 @@ $('#pl-client-list').querySelectorAll('[data-pl-client]').forEach(b=>b.addEventL
 let activeClient=null;
 function openClient(id){
 const c=directory.find(x=>x.id===id);if(!c)return;activeClient=c;
+saveRoute({page:'detail',clientId:id});
 const jobs=c.jobs||[];
 $('#pl-detail-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">CLIENTE · '+esc(c.tipo||'')+'</div><h1>'+esc(c.nome)+'</h1><div class="pl-meta">'+jobs.length+' jobs</div></div>'+
 '<section class="pl-block"><h2>Jobs</h2>'+(jobs.length?jobs.map(j=>'<button class="pl-card pl-compact pl-row" data-pl-job="'+esc(j.id)+'"><div><h3>'+esc(j.titulo)+'</h3><p>'+esc(j.empreendimento||'')+' · '+esc(j.status||'Sem status')+'</p></div><span class="pl-chevron">›</span></button>').join(''):'<p class="pl-empty">Nenhum job cadastrado.</p>')+'</section>'+
@@ -128,7 +150,7 @@ function fold(title,body,count,expanded){
 return '<details class="pl-fold"'+(expanded?' open':'')+'><summary>'+esc(title)+(count===null?'':' ('+count+')')+'</summary><div class="pl-fold-body">'+body+'</div></details>';
 }
 async function openJob(id){
-professionalJob=null;
+professionalJob=null;plCurrentJob=id;
 const j=(activeClient?.jobs||[]).find(x=>x.id===id);if(!j)return;
 $('#pl-job-content').innerHTML='<p class="pl-empty">Carregando pasta do job...</p>';switchTo('job');
 const [{data,error},{data:faturamento,error:fatError},{data:extras}]=await Promise.all([window.plSupabase.rpc('pl_demo_job_contents',{p_job_id:id}),window.plSupabase.rpc('pl_demo_job_faturamento',{p_job_id:id}),window.plSupabase.rpc('pl_demo_job_extra_photos',{p_job_id:id})]);
@@ -245,7 +267,7 @@ $('#pl-lightbox').addEventListener('click',e=>{if(e.target.id==='pl-lightbox')$(
 async function openProfessionalJob(id){
  const job=professionalJobs.find(x=>x.id===id);
  if(!job)return alert('Job não encontrado na sua lista autorizada.');
- professionalJob=id;switchTo('job');
+ professionalJob=id;plCurrentJob=id;switchTo('job');
  $('#pl-job-content').innerHTML='<p class="pl-empty">Carregando álbuns profissionais…</p>';
  const {data:albums,error}=await window.plSupabase.from('albuns')
   .select('id,titulo,assunto,data_vistoria').eq('job_principal_id',id)
@@ -282,11 +304,45 @@ jobs.querySelectorAll('[data-professional-job]').forEach(button=>button.onclick=
 window.plSupabase?.auth.onAuthStateChange((_event,session)=>{updateProfileIcon(session);if(current==='access')setTimeout(refreshAuth,0)});
 function updateProfileIcon(session){const button=document.querySelector('header .profile');if(!button)return;const url=session?.user?.user_metadata?.avatar_url||session?.user?.user_metadata?.picture;button.replaceChildren();if(url&&/^https:\/\//i.test(url)){const img=document.createElement('img');img.src=url;img.alt='';img.referrerPolicy='no-referrer';img.style.cssText='width:100%;height:100%;border-radius:50%;object-fit:cover';img.onerror=()=>{img.remove();button.textContent='◯'};button.append(img)}else{button.innerHTML='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-7 8-7s8 2 8 7"/></svg>'}button.setAttribute('aria-label',session?'Minha conta':'Entrar com Google')}
 window.plSupabase?.auth.getSession().then(({data})=>updateProfileIcon(data.session)).catch(()=>{});
+async function restoreWorkspaceRoute(){
+ const route=savedRoute();
+ if(!route||route.page==='home')return;
+ plRestoringRoute=true;
+ try{
+  if(route.page==='clients'||route.page==='access'||route.page==='more'){
+   switchTo(route.page);
+   if(route.page==='access')await refreshAuth();
+   return;
+  }
+  if(route.clientId&&directory.some(c=>c.id===route.clientId))openClient(route.clientId);
+  if(route.page==='detail')return;
+  if(route.professional&&route.jobId){
+   const {data,error}=await window.plSupabase.rpc('pl_meus_jobs');
+   if(error)throw error;
+   professionalJobs=Array.isArray(data)?data:[];
+   if(professionalJobs.some(j=>j.id===route.jobId))await openProfessionalJob(route.jobId);
+  }else if(route.jobId&&activeClient?.jobs?.some(j=>j.id===route.jobId)){
+   await openJob(route.jobId);
+  }
+  if(route.page==='album'&&route.albumId){
+   await openAlbum(route.albumId,!!route.professional);
+  }
+ }catch(e){
+  console.warn('Não foi possível restaurar o álbum/job anterior:',e);
+  switchTo('home');
+ }finally{
+  plRestoringRoute=false;
+ }
+}
 async function load(){
 if(!window.plSupabase){$('#pl-client-list').innerHTML='<p class="pl-error">Supabase indisponível.</p>';return}
 const {data,error}=await window.plSupabase.rpc('pl_demo_client_directory');
 if(error){$('#pl-client-list').innerHTML='<p class="pl-error">Erro ao consultar os clientes. Tente atualizar a página.</p>';console.error(error.message);return}
 directory=Array.isArray(data)?data:[];renderList();
+if(!plRouteRestored){
+ plRouteRestored=true;
+ await restoreWorkspaceRoute();
+}
 }
 $('#pl-client-search').addEventListener('input',renderList);
 $('#pl-detail-back').addEventListener('click',()=>switchTo('clients'));$('#pl-job-back').addEventListener('click',()=>switchTo(professionalJob?'access':'detail'));
