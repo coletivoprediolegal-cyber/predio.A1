@@ -174,7 +174,7 @@
    const result=await sb.rpc('pl_report_album_edit',{p_album_id:state.album.id,p_action:action,p_payload:payload});
    if(result.error||!result.data?.ok)throw result.error||new Error('Não foi possível confirmar a alteração');
    window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId:state.album.id,action}}));
-   error({message:'Classificação atualizada no álbum.'});
+   error({message:''});
   }catch(e){
    if(action==='anomalia')item.source.nivel_anomalia=original;
    else{item.destaque_no_relatorio=original;item.source.destaque=original}
@@ -224,6 +224,7 @@
   row.querySelectorAll('[data-album-action]').forEach(button=>button.onclick=()=>editAlbumPhoto(state.items[index],button.dataset.albumAction));
   row.querySelector('[data-drag-handle]').addEventListener('pointerdown',startReportDrag);
   row.querySelector('img').draggable=false;
+  row.querySelector('img').addEventListener('pointerdown',startReportDrag);
  }
  function rows(){
   const target=dialog.querySelector('#rf-items');
@@ -352,7 +353,7 @@
    state.items.forEach((item,idx)=>{item.numero=positions[idx]});
    if(state.id)dirty=true;
    window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId:state.album.id,action:'reorder'}}));
-   error({message:'Nova ordem salva no álbum.'});
+   error({message:''});
   }catch(err){
    state.items=original;
    error({message:'A ordem anterior foi restaurada: '+(err.message||err)});
@@ -475,7 +476,7 @@
   const originals=new Map(state.items.map(i=>[i.fotografia_id,i]));
   if(items.some(i=>!originals.has(i.fotografia_id)))throw new Error('Há fotografias removidas ou inacessíveis no álbum. Revise a fonte antes de abrir este relatório.');
   const included=new Set(items.map(i=>i.fotografia_id));
-  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;dirty=false;render();
+  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,destaque_no_relatorio:!!originals.get(i.fotografia_id).source.destaque,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;dirty=false;render();
  }catch(e){error(e)}finally{busy=false}}
  async function exportPDF(){
   if(busy)return;
