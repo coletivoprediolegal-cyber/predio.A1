@@ -3,7 +3,7 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const titlecase={planejado:'Planejado',em_andamento:'Em andamento',concluido:'Concluído',suspenso:'Suspenso'};
 const state={area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:''};
-let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],busy=false,errorText='';
+let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],busy=false,errorText='',isAdmin=false;
 const sb=()=>window.plSupabase;
 const mini=()=>workspace.mini_jobs||[];
 const locais=()=>workspace.locais||[];
@@ -42,7 +42,7 @@ function form(){
  return '<form id="cw-form" class="cw-form"><div class="cw-form-title">Novo mini-job</div><label>Título<input name="titulo" maxlength="180" required placeholder="Ex.: Verificação da reforma" autocomplete="off"></label><label>Assunto<input name="assunto" list="cw-subjects" maxlength="120" required value="'+esc(state.subject|| (state.area==='privativa'?'Obras privativas':''))+'" placeholder="Ex.: Obras privativas"><datalist id="cw-subjects">'+[...new Set([...suggested,...subjects()])].map(s=>'<option value="'+esc(s)+'"></option>').join('')+'</datalist></label>'+options+'<label>Status<select name="status"><option value="em_andamento">Em andamento</option><option value="planejado">Planejado</option><option value="concluido">Concluído</option><option value="suspenso">Suspenso</option></select></label><label>Observações<textarea name="descricao" rows="2" placeholder="Opcional"></textarea></label><div class="cw-form-actions"><button type="button" data-action="cancel-form">Cancelar</button><button type="submit" '+(busy?'disabled':'')+'>Salvar mini-job</button></div></form>';
 }
 function addButton(){
- return '<button class="cw-add" data-action="add">＋ Novo mini-job</button>';
+ return isAdmin?'<button class="cw-add" data-action="add">＋ Novo mini-job</button>':'';
 }
 function list(items,showAdd=true){
  return (showAdd?'<div class="cw-list-actions"><span>'+items.length+' mini-job(s)</span>'+addButton()+'</div>':'')+(items.length?'<div class="cw-mini-list">'+items.map(itemRow).join('')+'</div>':'<p class="cw-empty">Nenhum mini-job nesta seleção.</p>')+(state.form?form():'');
@@ -82,7 +82,12 @@ function detail(){
  const m=mini().find(x=>x.id===state.detail);if(!m)return '<p class="cw-empty">Mini-job não encontrado.</p>';
  const links=workspace.albuns.filter(a=>a.mini_job_id===m.id);
  const options=allAlbums.filter(a=>!links.some(v=>v.id===a.id));
- return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div><label class="cw-detail-status">Andamento<select id="cw-status" '+(busy?'disabled':'')+'>'+Object.entries(titlecase).map(([k,v])=>'<option value="'+k+'" '+(m.status===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label><label class="cw-detail-notes">Observações<textarea id="cw-notes" rows="4">'+esc(m.descricao||'')+'</textarea></label><button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar observações</button><h3>Álbuns vinculados</h3>'+(links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button><button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button></div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>')+'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div></div>';
+ const statusControl=isAdmin?'<label class="cw-detail-status">Andamento<select id="cw-status" '+(busy?'disabled':'')+'>'+Object.entries(titlecase).map(([k,v])=>'<option value="'+k+'" '+(m.status===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label>':'<span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span>';
+ const notes='<label class="cw-detail-notes">Observações<textarea id="cw-notes" rows="4" '+(!isAdmin?'readonly':'')+'>'+esc(m.descricao||'')+'</textarea></label>';
+ const save=isAdmin?'<button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar observações</button>':'';
+ const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
+ const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
+ return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<h3>Álbuns vinculados</h3>'+albumRows+albumActions+'</div>';
 }
 function render(){
  if(!root)return;
@@ -155,9 +160,9 @@ function bind(){
 }
 window.PLCondoWorkspace={
  async mount(node,currentJob){
-  root=node;job=currentJob;errorText='';Object.assign(state,{area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:''});
+  root=node;job=currentJob;errorText='';isAdmin=false;Object.assign(state,{area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:''});
   node.innerHTML='<p class="pl-empty">Carregando áreas, torres e mini-jobs…</p>';
-  try{await reload()}catch(e){node.innerHTML='<p class="pl-error">Não foi possível abrir o monitoramento: '+esc(e.message)+'</p>'}
+  try{const profile=await sb().rpc('pl_meu_perfil');isAdmin=!profile.error&&profile.data?.ativo&&profile.data?.papel==='administrador';await reload()}catch(e){node.innerHTML='<p class="pl-error">Não foi possível abrir o monitoramento: '+esc(e.message)+'</p>'}
  }
 };
 })();
