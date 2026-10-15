@@ -25,11 +25,9 @@
  async function create(jobId,onCreated){
   try{await admin()}catch(e){alert(e.message);return}
   show();
-  const today=new Date();
-  const date=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
   content.innerHTML='<div class="pl-import-eyebrow">PRÉDIO LEGAL · ÁLBUM</div><h2>Novo álbum fotográfico</h2><p class="pl-import-description">O álbum ficará vinculado ao job e terá a mesma organização utilizada pelo relatório fotográfico.</p>'+
    '<form id="pl-new-album-form"><label>Nome do álbum<input name="titulo" autocomplete="off" maxlength="150" required minlength="3" placeholder="Ex.: Fachadas e revestimentos"></label>'+
-   '<label>Data de referência<input name="data" type="date" required value="'+date+'"></label>'+
+   '<p class="pl-import-description">A data de referência será identificada automaticamente a partir da data original das fotografias importadas. Não é necessário preenchê-la agora.</p>'+
    '<label>Assunto <small>opcional</small><input name="assunto" autocomplete="off" maxlength="300" placeholder="Ex.: Vistoria inicial"></label>'+
    '<div class="pl-import-actions"><button type="button" class="pl-import-secondary" id="pl-new-album-cancel">Cancelar</button><button class="pl-import-primary" type="submit">Criar álbum</button></div>'+
    '<p class="pl-import-status" role="status"></p></form>';
@@ -37,11 +35,11 @@
   content.querySelector('#pl-new-album-form').onsubmit=async event=>{
    event.preventDefault();if(processing)return;
    const form=event.currentTarget,button=form.querySelector('[type=submit]'),status=form.querySelector('.pl-import-status');
-   const titulo=form.elements.titulo.value.trim(),data=form.elements.data.value,assunto=form.elements.assunto.value.trim();
-   if(titulo.length<3||!data)return;
+   const titulo=form.elements.titulo.value.trim(),assunto=form.elements.assunto.value.trim();
+   if(titulo.length<3)return;
    processing=true;button.disabled=true;status.textContent='Criando álbum…';
    try{
-    const {data:id,error}=await sb.rpc('pl_album_criar_profissional',{p_job_id:jobId,p_titulo:titulo,p_data:data,p_assunto:assunto});
+    const {data:id,error}=await sb.rpc('pl_album_criar_profissional',{p_job_id:jobId,p_titulo:titulo,p_data:null,p_assunto:assunto});
     if(error||!id)throw error||new Error('Não foi possível criar o álbum.');
     processing=false;close();
     if(typeof onCreated==='function')await onCreated(id);
@@ -77,7 +75,7 @@
  async function uploadFiles(files){
   if(processing)return;
   show();processing=true;abort=false;
-  let saved=0,failed=0;
+  let saved=0,failed=0,withCapture=0,withoutCapture=0;
   const maxMB=50;
   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Importando fotografias</h2>'+
    '<p class="pl-import-description">Os arquivos originais serão armazenados no Supabase e vinculados ao álbum, mantendo a resolução disponível no arquivo selecionado.</p>'+
@@ -96,12 +94,17 @@
    else{
     const name=selectedAlbum+'/'+crypto.randomUUID()+'.'+spec.extension;
     try{
+     const capture=await window.PLPhotoMetadata?.read(file);
      const upload=await sb.storage.from('predio-legal-fotos').upload(name,file,{contentType:spec.mime,cacheControl:'3600',upsert:false});
      if(upload.error)throw upload.error;
-     const record=await sb.rpc('pl_album_foto_registrar',{p_album_id:selectedAlbum,p_caminho:name,p_nome:file.name,
-      p_mime:spec.mime,p_bytes:file.size,p_largura:null,p_altura:null});
+     const record=await sb.rpc('pl_album_foto_registrar_v2',{p_album_id:selectedAlbum,p_caminho:name,p_nome:file.name,
+      p_mime:spec.mime,p_bytes:file.size,p_largura:null,p_altura:null,
+      p_capturada_em:capture?.capturadaEm||null,
+      p_data_original_local:capture?.dataOriginalLocal||null,
+      p_data_origem:capture?.origem||null});
      if(record.error||!record.data)throw record.error||new Error('Não foi possível registrar a fotografia');
      saved++;
+     if(capture?.capturadaEm)withCapture++;else withoutCapture++;
     }catch(e){
      failed++;console.warn('Não foi possível importar',file.name,e);
      content.querySelector('#pl-import-errors').textContent='Houve '+failed+' falha(s) de importação; os demais arquivos continuarão.';
@@ -112,7 +115,7 @@
   }
   processing=false;
   const imported=content.querySelector('#pl-import-current');
-  if(imported)imported.textContent=saved+' foto(s) importadas · '+failed+' falha(s)'+(abort?' · Importação interrompida':'');
+  if(imported)imported.textContent=saved+' foto(s) importadas · '+withCapture+' com data original · '+withoutCapture+' sem data original'+(failed?' · '+failed+' falha(s)':'')+(abort?' · Importação interrompida':'');
   const actions=content.querySelector('.pl-import-actions');
   if(actions)actions.innerHTML='<button class="pl-import-primary" type="button" id="pl-import-done">Voltar ao álbum</button>';
   if(typeof afterImport==='function'){
