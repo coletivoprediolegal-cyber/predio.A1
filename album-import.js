@@ -244,15 +244,16 @@
  async function prepareDemoImport(albumId,onActivated){
   if(processing)return;
   show();
-  content.innerHTML='<div class="pl-import-eyebrow">IMPORTAR FOTOGRAFIAS REAIS</div>'+
+  content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS REAIS</div>'+
    '<h2>Adicionar fotografias</h2>'+
-   '<p class="pl-import-description">Este álbum nasceu na demonstração. Para guardar fotografias reais de forma privada, vamos vinculá-lo a um job profissional. O nome, o assunto e as seções serão preservados.</p>'+
+   '<p class="pl-import-description">Este álbum já pertence ao job em que você o criou. Vamos mantê-lo nesse mesmo job e proteger suas fotografias com acesso privado.</p>'+
    '<p class="pl-import-status" role="status">Verificando sua conta…</p>';
-  const {data:{session}}=await sb.auth.getSession();
+  const {data:{session},error:sessionError}=await sb.auth.getSession();
+  if(sessionError){content.querySelector('.pl-import-status').textContent=sessionError.message;return}
   if(!session){
    content.innerHTML+='<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-demo-google-login">Entrar com Google</button>'+
     '<button type="button" class="pl-import-secondary" id="pl-demo-cancel">Cancelar</button></div>';
-   content.querySelector('.pl-import-status').textContent='Entre com uma conta autorizada para importar as fotografias.';
+   content.querySelector('.pl-import-status').textContent='Entre com sua conta administradora para armazenar fotos reais.';
    content.querySelector('#pl-demo-cancel').onclick=close;
    content.querySelector('#pl-demo-google-login').onclick=async()=>{
     sessionStorage.setItem('pl-pending-demo-import',albumId);
@@ -261,47 +262,33 @@
    };
    return;
   }
-  let jobs=[];
-  try{
-   await admin();
-   const {data,error}=await sb.rpc('pl_meus_jobs');
-   if(error)throw error;
-   jobs=(Array.isArray(data)?data:[]).filter(j=>j.id);
-   if(!jobs.length)throw Error('Nenhum job profissional está disponível nesta conta.');
-  }catch(e){
+  try{await admin()}catch(e){
    content.querySelector('.pl-import-status').textContent=e.message||'Conta sem permissão';
    content.insertAdjacentHTML('beforeend','<div class="pl-import-actions"><button class="pl-import-secondary" id="pl-demo-close" type="button">Fechar</button></div>');
    content.querySelector('#pl-demo-close').onclick=close;
    return;
   }
-  content.innerHTML+='<label class="pl-import-job-label">Vincular ao job profissional<select id="pl-demo-target-job">'+
-   jobs.map(j=>'<option value="'+html(j.id)+'">'+html(j.titulo+(j.empreendimento?' — '+j.empreendimento:''))+'</option>').join('')+
-   '</select></label><p class="pl-import-description">As fotos ficarão no armazenamento privado do Prédio Legal. O álbum deixará de aparecer na demonstração e ficará dentro do job escolhido.</p>'+
+  content.innerHTML+='<p class="pl-import-description">O nome, o assunto, as seções e o vínculo original serão preservados. O álbum deixará de ser demonstrativo e somente pessoas autorizadas terão acesso às fotografias.</p>'+
    '<div class="pl-import-actions"><button type="button" class="pl-import-secondary" id="pl-demo-cancel">Cancelar</button>'+
-   '<button type="button" class="pl-import-primary" id="pl-demo-activate">Vincular e escolher fotos</button></div>';
+   '<button type="button" class="pl-import-primary" id="pl-demo-activate">Continuar para fotos</button></div>';
   content.querySelector('.pl-import-status').textContent='';
   content.querySelector('#pl-demo-cancel').onclick=close;
   content.querySelector('#pl-demo-activate').onclick=async()=>{
    if(processing)return;
-   const jobId=content.querySelector('#pl-demo-target-job').value;
-   if(!jobs.some(j=>j.id===jobId))return;
    const button=content.querySelector('#pl-demo-activate');
    button.disabled=true;processing=true;
    const status=content.querySelector('.pl-import-status');
-   status.textContent='Vinculando o álbum ao job…';
+   status.textContent='Protegendo o álbum no job original…';
    try{
-    const {data,error}=await sb.rpc('pl_promover_album_demo_vazio',{p_album_id:albumId,p_job_id:jobId});
-    if(error||data!==albumId)throw error||new Error('Não foi possível vincular o álbum');
+    const {data,error}=await sb.rpc('pl_privativar_album_demo_vazio',{p_album_id:albumId});
+    if(error||data!==albumId)throw error||new Error('Não foi possível proteger o álbum');
     processing=false;
     close();
-    if(typeof onActivated==='function'){
-     await onActivated(jobId,albumId);
-    }else{
-     location.reload();
-    }
+    if(typeof onActivated==='function')await onActivated(albumId);
+    else location.reload();
    }catch(e){
     processing=false;button.disabled=false;
-    status.textContent=e.message||'Não foi possível vincular o álbum.';
+    status.textContent=e.message||'Não foi possível preparar o álbum.';
    }
   };
  }
