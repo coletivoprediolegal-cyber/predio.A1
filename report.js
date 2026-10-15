@@ -139,7 +139,59 @@
     '<div class="rf-page-number">'+(ix+1)+' / '+pages.length+'</div></div></section>';
   }).join('');
  }
- function preview(){dialog.querySelector('.rf-preview').innerHTML=sheets()||'<p>Selecione ao menos uma fotografia.</p>'}
+ function reportHeader(){
+  const name=state.empreendimento||state.album.titulo||'';
+  const ref=state.album.data_vistoria?new Date(state.album.data_vistoria+'T12:00:00').toLocaleDateString('pt-BR'):'';
+  return '<div class="rf-report-head"><div class="rf-report-title">RELATÓRIO FOTOGRÁFICO</div>'+
+    '<div class="rf-report-enterprise">'+escape(name)+'</div>'+
+    '<div class="rf-report-date">'+(ref?'Data de referência: '+escape(ref):'')+'</div></div>';
+ }
+ function notesSheet(){
+  return '<section class="rf-sheet rf-appendix" data-layout="notes"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
+   '<div class="rf-content">'+reportHeader()+
+   '<div class="rf-section">OBSERVAÇÕES COMPLEMENTARES</div>'+
+   '<div class="rf-appendix-list"></div><div class="rf-page-number"></div></div></section>';
+ }
+ function prepareSheets(target){
+  target.innerHTML=sheets()||'<p>Selecione ao menos uma fotografia.</p>';
+  const overflow=[];
+  for(const cap of target.querySelectorAll('.rf-caption')){
+   const original=cap.textContent.trim();
+   if(!original)continue;
+   const minimum=7.2;
+   let pt=parseFloat(getComputedStyle(cap).fontSize)*72/96;
+   while((cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1)&&pt>minimum){
+    pt=Math.max(minimum,pt-.35);
+    cap.style.fontSize=pt.toFixed(2)+'pt';
+   }
+   if(cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1){
+    const number=cap.closest('.rf-cell').dataset.photoNumber;
+    overflow.push({number,body:original});
+    cap.textContent='Obs. completa ao final';
+    cap.style.fontSize=minimum+'pt';
+   }
+  }
+  if(overflow.length){
+   let page=null,list=null;
+   for(const note of overflow){
+    if(!page){page=document.createElement('div');page.innerHTML=notesSheet();page=page.firstElementChild;target.append(page);list=page.querySelector('.rf-appendix-list')}
+    const node=document.createElement('article');
+    node.className='rf-appendix-item';
+    node.innerHTML='<div class="rf-note-number">Foto '+escape(String(note.number).padStart(2,'0'))+'</div><p class="rf-note-text">'+escape(note.body)+'</p>';
+    list.append(node);
+    if(list.scrollHeight>list.clientHeight+2){
+     node.remove();
+     page=document.createElement('div');page.innerHTML=notesSheet();page=page.firstElementChild;target.append(page);list=page.querySelector('.rf-appendix-list');
+     list.append(node);
+     if(list.scrollHeight>list.clientHeight+2)throw new Error('Uma observação excede uma página. Reduza apenas essa observação.');
+    }
+   }
+  }
+  const pages=[...target.querySelectorAll('.rf-sheet')];
+  pages.forEach((page,index)=>{page.querySelector('.rf-page-number').textContent=(index+1)+' / '+pages.length});
+ }
+ function preview(){const element=dialog.querySelector('.rf-preview');if(element)prepareSheets(element)}
+
  async function save(){if(busy)return;busy=true;dialog.querySelector('#rf-save').disabled=true;try{
   if(!state.titulo.trim())throw new Error('Informe um título.');
   if(!state.items.some(i=>i.incluir))throw new Error('Selecione ao menos uma fotografia.');
@@ -171,7 +223,7 @@
    dialog.inert=true;
    print=document.createElement('div');
    print.style.cssText='position:fixed;left:-12000px;top:0;width:210mm;pointer-events:none;z-index:-1';
-   print.innerHTML=sheets();document.body.append(print);
+   document.body.append(print);prepareSheets(print);
    for(const img of print.querySelectorAll('img')){
     if(img.src.startsWith('https:'))img.crossOrigin='anonymous';
    }
