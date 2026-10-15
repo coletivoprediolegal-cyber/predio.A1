@@ -16,13 +16,16 @@ const labelLocal=id=>{const l=locais().find(x=>x.id===id);return l?(l.numero?'Ap
 const currentItems=()=>mini().filter(m=>m.area===state.area&&(state.area!=='privativa'||state.tab==='assunto'?(state.subject?m.assunto===state.subject:true):(state.unit?m.local_id===state.unit:state.tower?units(state.tower).some(l=>l.id===m.local_id):true))&&(state.filter==='todos'||m.status===state.filter));
 const subjects=()=>[...new Set(mini().filter(m=>m.area===state.area).map(m=>m.assunto))].sort(sorted);
 function breadcrumb(){
- let nodes=[['Monitoramento',()=>{state.area=null;state.detail=null;state.form=false}]];
- if(state.area)nodes.push([state.area==='comum'?'Áreas comuns':'Áreas privativas',()=>{state.detail=null;state.tower=null;state.unit=null;state.subject=null;state.form=false}]);
- if(state.area==='privativa'&&state.tab==='apartamento'&&state.tower){const t=towers().find(x=>x.id===state.tower);nodes.push(['Torre '+(t?.bloco||''),()=>{state.unit=null;state.detail=null;state.form=false}])}
- if(state.unit)nodes.push([labelLocal(state.unit),()=>{state.detail=null;state.form=false}]);
- if(state.subject)nodes.push([state.subject,()=>{state.detail=null;state.form=false}]);
- if(state.detail)nodes.push(['Mini-job',()=>{state.detail=null;state.form=false}]);
- return '<div class="cw-crumb">'+nodes.map((n,i)=>i===nodes.length-1?'<span>'+esc(n[0])+'</span>':'<button data-crumb="'+i+'">'+esc(n[0])+'</button><span aria-hidden="true">›</span>').join('')+'</div>';
+ const nodes=[['Monitoramento','overview']];
+ if(state.area)nodes.push([state.area==='comum'?'Áreas comuns':'Áreas privativas','area']);
+ if(state.area==='privativa'&&state.tab==='apartamento'&&state.tower){
+  const tower=towers().find(x=>x.id===state.tower);
+  nodes.push(['Torre '+(tower?.bloco||''),'tower']);
+ }
+ if(state.unit)nodes.push([labelLocal(state.unit),'unit']);
+ if(state.subject)nodes.push([state.subject,'subject']);
+ if(state.detail)nodes.push(['Mini-job','detail']);
+ return '<div class="cw-crumb">'+nodes.map((n,i)=>i===nodes.length-1?'<span>'+esc(n[0])+'</span>':'<button data-crumb="'+esc(n[1])+'">'+esc(n[0])+'</button><span aria-hidden="true">›</span>').join('')+'</div>';
 }
 function itemRow(m){
  const amount=workspace.albuns.filter(a=>a.mini_job_id===m.id).length;
@@ -101,10 +104,10 @@ async function guarded(fn){
 }
 function bind(){
  root.querySelectorAll('[data-crumb]').forEach(b=>b.onclick=()=>{
-  const i=Number(b.dataset.crumb);state.detail=null;state.form=false;state.search='';
-  if(i===0){state.area=null;state.tower=null;state.unit=null;state.subject=null}
-  else if(i===1){state.tower=null;state.unit=null;state.subject=null}
-  else if(state.tab==='apartamento'&&state.tower){state.unit=null}
+  const target=b.dataset.crumb;state.detail=null;state.form=false;state.search='';
+  if(target==='overview'){state.area=null;state.tower=null;state.unit=null;state.subject=null}
+  if(target==='area'){state.tower=null;state.unit=null;state.subject=null}
+  if(target==='tower'){state.unit=null}
   render();
  });
  root.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{state.area=b.dataset.area;state.tab='apartamento';state.tower=null;state.unit=null;state.subject=null;state.filter='todos';state.form=false;render()});
