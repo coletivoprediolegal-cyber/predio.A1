@@ -104,8 +104,8 @@ async function reload(){
  render();
 }
 async function guarded(fn){
- if(busy)return;
- busy=true;errorText='';try{await fn();await reload()}catch(e){errorText=e.message||'Não foi possível concluir a alteração';render()}finally{busy=false}
+ if(busy)return false;
+ busy=true;errorText='';try{await fn();await reload();return true}catch(e){errorText=e.message||'Não foi possível concluir a alteração';render();return false}finally{busy=false}
 }
 function bind(){
  root.querySelectorAll('[data-crumb]').forEach(b=>b.onclick=()=>{
@@ -143,10 +143,10 @@ function bind(){
  root.querySelector('[data-action="new-album"]')?.addEventListener('click',()=>{
   if(!window.PLAlbumImport?.create){errorText='Criador de álbuns indisponível.';render();return}
   window.PLAlbumImport.create(job.id,async albumId=>{
-   await guarded(async()=>{
+   const linked=await guarded(async()=>{
     const {error}=await sb().from('mini_job_albuns').insert({mini_job_id:state.detail,album_id:albumId});if(error)throw error;
    });
-   document.dispatchEvent(new CustomEvent('pl:open-album',{detail:{id:albumId}}));
+   if(linked)document.dispatchEvent(new CustomEvent('pl:open-album',{detail:{id:albumId}}));
   });
  });
  root.querySelector('#cw-album-pick')?.addEventListener('change',e=>{
