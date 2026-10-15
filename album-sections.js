@@ -97,6 +97,8 @@ for(const {el,id} of photos()){
   el.hidden=active!=='all'&&(active==='none'?!!info?.secao_id:info?.secao_id!==active);
   el.classList.toggle('pl-selected',selected.has(id));
   el.classList.toggle('pl-organizing',mode||reorder);
+  el.classList.toggle('pl-selecting',mode);
+  el.classList.toggle('pl-reordering',reorder);
   el.draggable=false;
   const actions=el.querySelector('.pl-photo-actions');
   if(actions)actions.hidden=mode||reorder;
@@ -175,6 +177,14 @@ function endGesture(e,cancelled){
   gesture=null;
   clearTimeout(g.timer);
   if(g.kind==='normal')return;
+  if(g.kind==='pending-select'){
+    // Só um toque concluído seleciona. Deslizar não altera nenhuma foto.
+    if(!cancelled&&Math.hypot(e.clientX-g.startX,e.clientY-g.startY)<10){
+      paint(g.id,g.add);
+      render().catch(console.error);
+    }
+    return;
+  }
   if(g.kind==='select'){
     if(!cancelled)render().catch(console.error);
     return;
@@ -214,10 +224,11 @@ function bindGestures(grid){
     const id=preview.dataset.preview,el=preview.closest('.pl-photo-card');
     if(!id||el?.hidden)return;
     if(mode){
-      e.preventDefault();
-      const add=!selected.has(id);
-      paint(id,add);
-      gesture={kind:'select',pointerId:e.pointerId,x:e.clientX,y:e.clientY,add};
+      // Não consumir pointerdown: permitir o scroll vertical nativo do Android.
+      // A seleção somente se confirma no pointerup sem deslocamento.
+      gesture={kind:'pending-select',pointerId:e.pointerId,id,
+        startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,
+        pointerType:e.pointerType||'mouse',add:!selected.has(id)};
     }else if(reorder){
       e.preventDefault();
       const g={kind:'reorder',pointerId:e.pointerId,el,id,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,moved:false,started:false,ghost:null,timer:null};
@@ -243,7 +254,27 @@ document.addEventListener('pointermove',e=>{
     if(Math.hypot(e.clientX-g.startX,e.clientY-g.startY)>10){clearTimeout(g.timer);gesture=null}
     return;
   }
-  if(g.kind==='select'){
+  if(g.kind==='pending-select'){
+    const dx=e.clientX-g.startX,dy=e.clientY-g.startY;
+    const distance=Math.hypot(dx,dy);
+    if(distance<9)return;
+    const touch=g.pointerType==='touch'||g.pointerType==='pen';
+    // Swipe vertical: scroll normalmente, sem selecionar fotografias.
+    if(touch&&Math.abs(dy)>=Math.abs(dx)){
+      gesture=null;
+      return;
+    }
+    // No touch, preservar seleção por arraste horizontal; no desktop,
+    // permitir arrastar em qualquer direção.
+    if(!touch||Math.abs(dx)>=14&&Math.abs(dx)>Math.abs(dy)*1.2){
+      g.kind='select';
+      paint(g.id,g.add);
+      e.preventDefault();
+      dragSelectionTo(g,e.clientX,e.clientY);
+      return;
+    }
+    if(distance>26)gesture=null;
+  }else if(g.kind==='select'){
     e.preventDefault();
     dragSelectionTo(g,e.clientX,e.clientY);
   }else if(g.kind==='reorder'){
