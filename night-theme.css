@@ -1,6 +1,6 @@
 /* Modo noturno Prédio Legal — paleta azul profundo e tipografia neutra.
    Mantém o modo claro e o papel/PDF institucional inalterados. */
-@media all {
+@media (prefers-color-scheme: dark) {
   :root{
     color-scheme:dark;
     --navy:#f6f3ee;
