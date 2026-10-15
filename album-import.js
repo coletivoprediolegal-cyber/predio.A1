@@ -61,7 +61,7 @@
  async function pickDevicePhotos(albumId,onImported){
   try{await admin()}catch(e){alert(e.message);return}
   const input=document.createElement('input');
-  input.type='file';input.accept='image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
+  input.type='file';input.accept='image/*';
   input.multiple=true;
   input.style.cssText='position:fixed;left:-10000px;top:0';
   document.body.append(input);
