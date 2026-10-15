@@ -470,8 +470,8 @@
    '<div class="rf-section">OBSERVAÇÕES COMPLEMENTARES</div>'+
    '<div class="rf-appendix-list"></div><div class="rf-page-number"></div></div></section>';
  }
- function prepareSheets(target,previewOnly=false){
-  target.innerHTML=sheets(previewOnly)||'<p class="rf-empty-preview">Nenhuma fotografia incluída no relatório.</p>';
+ function prepareSheets(target,previewOnly=false,exportOnePage=false){
+  target.innerHTML=sheets(previewOnly||exportOnePage)||'<p class="rf-empty-preview">Nenhuma fotografia incluída no relatório.</p>';
   const overflow=[];
   for(const cap of target.querySelectorAll('.rf-caption')){
    const original=cap.textContent.trim();
@@ -506,7 +506,7 @@
    }
   }
   const pages=[...target.querySelectorAll('.rf-sheet')];
-  pages.forEach((page,index)=>{page.querySelector('.rf-page-number').textContent=(previewOnly?previewIndex+1:index+1)+' / '+(previewOnly?totalPages():pages.length)});
+  pages.forEach((page,index)=>{page.querySelector('.rf-page-number').textContent=(previewOnly||exportOnePage?previewIndex+1:index+1)+' / '+(previewOnly||exportOnePage?totalPages():pages.length)});
  }
  function preview(){
   const element=dialog.querySelector('.rf-preview');
@@ -545,29 +545,43 @@
  }catch(e){error(e)}finally{busy=false}}
  async function exportPDF(){
   if(busy)return;
-  busy=true;const generation=revision;let print,restoreOriginals;
+  busy=true;const generation=revision;let print,restorePage,canvas;
   try{
    if(!state.items.some(i=>i.incluir))throw new Error('Nenhuma fotografia disponível para o relatório.');
-   error({message:'Preparando o PDF com fotografias originais…'});
    dialog.inert=true;
-   restoreOriginals=await prepareOriginalsForPDF(state.items,generation);
-   if(generation!==revision)return;
    print=document.createElement('div');
    print.style.cssText='position:fixed;left:-12000px;top:0;width:210mm;pointer-events:none;z-index:-1';
-   document.body.append(print);prepareSheets(print);
-   for(const img of print.querySelectorAll('img')){
-    if(img.src.startsWith('https:'))img.crossOrigin='anonymous';
-   }
-   await Promise.all([...print.querySelectorAll('img')].map(img=>img.decode()));
+   document.body.append(print);
    await document.fonts.ready;
    if(generation!==revision)return;
    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
-   const pages=[...print.querySelectorAll('.rf-sheet')];
-   for(let pageIndex=0;pageIndex<pages.length;pageIndex++){
-    const sheet=pages[pageIndex],rect=sheet.getBoundingClientRect();
-    const canvas=document.createElement('canvas');
-    canvas.width=2480;canvas.height=3508;
-    const ctx=canvas.getContext('2d',{alpha:false});
+   const reportPages=core.paginate(state.items,state.layout);
+   const initialPreviewIndex=previewIndex;
+   canvas=document.createElement('canvas');
+   // A4 at ~210 dpi: legible small print, far less memory than 300 dpi.
+   canvas.width=1748;canvas.height=2480;
+   const ctx=canvas.getContext('2d',{alpha:false});
+   let exportedPages=0;
+   for(let pageIndex=0;pageIndex<reportPages.length;pageIndex++){
+    if(generation!==revision)throw new Error('A geração do PDF foi interrompida.');
+    error({message:'Gerando página '+(pageIndex+1)+' de '+reportPages.length+'…'});
+    previewIndex=pageIndex;
+    const items=reportPages[pageIndex].items;
+    restorePage=await prepareOriginalsForPDF(items,generation);
+    try{
+     prepareSheets(print,false,true);
+     const imgs=[...print.querySelectorAll('img')];
+     for(const img of imgs){
+      if(img.src.startsWith('https:'))img.crossOrigin='anonymous';
+      try{await img.decode()}
+      catch(e){
+       const photo=img.closest('.rf-cell')?.dataset.photoNumber;
+       throw new Error(photo?'Não foi possível ler a imagem da foto '+photo+'. Verifique o arquivo original (HEIC ou imagem danificada).':'Não foi possível ler a folha institucional do relatório.');
+      }
+     }
+     const sheetsOnPage=[...print.querySelectorAll('.rf-sheet')];
+     for(const sheet of sheetsOnPage){
+      const rect=sheet.getBoundingClientRect();
     const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
     const pos=el=>{const r=el.getBoundingClientRect();return {x:(r.x-rect.x)*sx,y:(r.y-rect.y)*sy,w:r.width*sx,h:r.height*sy}};
     const rounded=(x,y,w,h,r=10)=>{
@@ -650,14 +664,21 @@
       write(note.querySelector('.rf-note-text'),'#26354b',400,'left',true);
      }
     }
-    if(pageIndex)pdf.addPage();
-    pdf.addImage(canvas.toDataURL('image/jpeg',.91),'JPEG',0,0,210,297);
-    canvas.width=canvas.height=1;
+    if(exportedPages++)pdf.addPage();
+    pdf.addImage(canvas.toDataURL('image/jpeg',.84),'JPEG',0,0,210,297);
+    // Let the Android browser flush each page before drawing the next one.
+    await new Promise(resolve=>setTimeout(resolve,0));
+     }
+    }finally{
+     print.replaceChildren();
+     restorePage?.();restorePage=null;
+    }
    }
+   previewIndex=initialPreviewIndex;
    pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+'.pdf');
    error({message:'PDF A4 exportado com a lauda original e as fotografias do álbum.'});
   }catch(e){console.error(e);error(e)}
-  finally{print?.remove();restoreOriginals?.();dialog.inert=false;busy=false}
+  finally{print?.remove();restorePage?.();if(canvas){canvas.width=canvas.height=1}dialog.inert=false;busy=false}
  }
  // The existing album remains the source; this adds only a report action.
  const albumContent=document.querySelector('#pl-album-content');
