@@ -1,0 +1,34 @@
+/* Galeria expandida: uso em monitores e notebooks para reorganização.
+   O restante do aplicativo mantém suas dimensões originais. */
+@media (min-width: 800px) {
+  #pl-album.container {
+    width: calc(100% - 32px);
+    max-width: none;
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+  #pl-album-content {width:100%;max-width:none}
+  #pl-album .pl-photo-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(148px,1fr));
+    gap:12px;
+    width:100%;
+    margin-inline:0;
+  }
+  #pl-album .pl-photo-preview{aspect-ratio: 1.32}
+  #pl-album #pl-section-controls,
+  #pl-album #pl-filters,
+  #pl-album .pl-bulk,
+  #pl-album .pl-sections {
+    max-width:100%;
+  }
+  #pl-album .pl-jobhead,#pl-album .pl-top{text-align:left}
+  #pl-album .pl-photo-actions button{min-height:31px}
+}
+@media(min-width:1280px){
+  #pl-album.container {width:calc(100% - 44px)}
+  #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+}
+@media(min-width:1920px){
+  #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+}
