@@ -195,9 +195,10 @@
    });
   });
  }
- function sheets(){
+ function sheets(previewOnly=false){
   const pages=core.paginate(state.items,state.layout);
   return pages.map((p,ix)=>{
+   if(previewOnly&&ix!==previewIndex)return '';
    const columns=p.size===36?6:p.size===16?4:p.size>=9?3:p.size>=4?2:1;
    const rows=Math.ceil(p.size/columns);
    const name=state.empreendimento||state.album.titulo||'';
@@ -209,7 +210,7 @@
     const cls='rf-cell'+(featured?' rf-featured':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
     return '<figure class="'+cls+'" data-photo-number="'+escape(i.numero)+'"><div class="rf-photo"><img src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
-     '<span class="rf-number">'+escape(String(i.numero).padStart(2,'0'))+'</span>'+
+     '<span class="rf-number">'+(featured?'★ ':'')+escape(String(i.numero).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
      '</div>'+(p.size===36?'':'<figcaption class="rf-caption">'+(note?escape(note):'')+'</figcaption>')+'</figure>';
@@ -238,8 +239,8 @@
    '<div class="rf-section">OBSERVAÇÕES COMPLEMENTARES</div>'+
    '<div class="rf-appendix-list"></div><div class="rf-page-number"></div></div></section>';
  }
- function prepareSheets(target){
-  target.innerHTML=sheets()||'<p>Selecione ao menos uma fotografia.</p>';
+ function prepareSheets(target,previewOnly=false){
+  target.innerHTML=sheets(previewOnly)||'<p class="rf-empty-preview">Nenhuma fotografia incluída no relatório.</p>';
   const overflow=[];
   for(const cap of target.querySelectorAll('.rf-caption')){
    const original=cap.textContent.trim();
@@ -257,7 +258,7 @@
     cap.style.fontSize=minimum+'pt';
    }
   }
-  if(overflow.length){
+  if(overflow.length&&!previewOnly){
    let page=null,list=null;
    for(const note of overflow){
     if(!page){page=document.createElement('div');page.innerHTML=notesSheet();page=page.firstElementChild;target.append(page);list=page.querySelector('.rf-appendix-list')}
@@ -274,9 +275,19 @@
    }
   }
   const pages=[...target.querySelectorAll('.rf-sheet')];
-  pages.forEach((page,index)=>{page.querySelector('.rf-page-number').textContent=(index+1)+' / '+pages.length});
+  pages.forEach((page,index)=>{page.querySelector('.rf-page-number').textContent=(previewOnly?previewIndex+1:index+1)+' / '+(previewOnly?totalPages():pages.length)});
  }
- function preview(){const element=dialog.querySelector('.rf-preview');if(element)prepareSheets(element)}
+ function preview(){
+  const element=dialog.querySelector('.rf-preview');
+  if(!element)return;
+  const total=totalPages();previewIndex=Math.min(Math.max(0,previewIndex),Math.max(0,total-1));
+  prepareSheets(element,true);updateCounts();
+  const count=dialog.querySelector('#rf-preview-count');
+  if(count)count.textContent=total?'Página '+(previewIndex+1)+' de '+total:'Sem fotografias';
+  const prev=dialog.querySelector('#rf-page-prev'),next=dialog.querySelector('#rf-page-next');
+  if(prev)prev.disabled=previewIndex<=0;
+  if(next)next.disabled=!total||previewIndex>=total-1;
+ }
 
  async function save(){if(busy)return;busy=true;dialog.querySelector('#rf-save').disabled=true;try{
   if(!state.titulo.trim())throw new Error('Informe um título.');
@@ -378,10 +389,10 @@
      const srcX=(photo.naturalWidth-srcW)/2,srcY=(photo.naturalHeight-srcH)/2;
      ctx.save();rounded(p.x,p.y,p.w,p.h,4*sx);ctx.clip();
      ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h);ctx.restore();
-     if(frame){ctx.strokeStyle='#bd9c65';ctx.lineWidth=Math.max(2,1.8*sx);rounded(p.x,p.y,p.w,p.h,4*sx);ctx.stroke()}
+     if(frame){ctx.strokeStyle='#b77c36';ctx.lineWidth=Math.max(3,3.6*sx);rounded(p.x,p.y,p.w,p.h,4*sx);ctx.stroke()}
      const number=cell.querySelector('.rf-number');
      if(number){
-      const n=pos(number);ctx.fillStyle=frame?'#a88047':'#20314e';rounded(n.x,n.y,n.w,n.h,4*sx);ctx.fill();
+      const n=pos(number);ctx.fillStyle=frame?'#a9702d':'#20314e';rounded(n.x,n.y,n.w,n.h,4*sx);ctx.fill();
       ctx.fillStyle='#fff';ctx.font='600 '+(parseFloat(getComputedStyle(number).fontSize)*sy)+'px Arial';
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(number.textContent,n.x+n.w/2,n.y+n.h/2);
      }
