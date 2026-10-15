@@ -1,0 +1,32 @@
+
+#pl-import-overlay[hidden]{display:none}
+#pl-import-overlay{position:fixed;inset:0;z-index:16000;display:flex;align-items:center;justify-content:center;padding:14px}
+.pl-import-shade{position:absolute;inset:0;background:rgba(22,29,40,.47)}
+.pl-import-panel{position:relative;background:#f8f4ea;color:#26354b;border:1px solid #dfd5c6;border-radius:18px;width:min(100%,510px);max-height:calc(100dvh - 34px);overflow-y:auto;padding:29px 23px 24px;box-shadow:0 18px 50px rgba(20,29,43,.18)}
+.pl-import-close{position:absolute;top:10px;right:12px;font-size:25px;background:none;color:#827669;border:0;min-width:34px;min-height:34px}
+.pl-import-eyebrow{color:#a18d77;letter-spacing:.10em;font:600 10px 'Instrument Sans',Arial,sans-serif;margin:2px 0 8px}
+.pl-import-content h2{margin:4px 0 8px;color:#1e2d49;font:400 26px/1.2 Georgia,serif}
+.pl-import-description{font:13px/1.55 'Instrument Sans',Arial,sans-serif;color:#898074;margin:0 0 17px}
+#pl-new-album-form label{display:flex;flex-direction:column;gap:6px;font:600 12px 'Instrument Sans',Arial,sans-serif;color:#4e5260;margin:0 0 14px}
+#pl-new-album-form label small{display:inline;font-weight:400;color:#a49b90}
+#pl-new-album-form input{min-height:44px;border:1px solid #ddd3c7;border-radius:11px;background:#fffdf8;padding:10px 13px;font:14px 'Instrument Sans',Arial,sans-serif;color:#26354b}
+.pl-import-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+.pl-import-actions button{border-radius:99px;min-height:41px;padding:10px 19px;font:600 12px 'Instrument Sans',Arial,sans-serif;cursor:pointer}
+.pl-import-secondary{background:transparent;border:1px solid #d8cbba;color:#786d60}
+.pl-import-primary{background:#273957;border:1px solid #273957;color:#fff}
+.pl-import-actions button:disabled{opacity:.45}
+.pl-import-status{font:12px/1.5 'Instrument Sans',Arial,sans-serif;color:#a26e4b;margin:12px 0 0}
+.pl-import-count{font:14px 'Instrument Sans',Arial,sans-serif;color:#26354b;display:flex;gap:5px;align-items:center}
+#pl-import-progress{width:100%;height:9px;margin:12px 0;accent-color:#26354b}
+.pl-import-current{font:12px/1.5 'Instrument Sans',Arial,sans-serif;color:#8e8274;overflow-wrap:anywhere;min-height:38px}
+.pl-pro-albums-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:20px 0 12px}
+.pl-pro-albums-header h2{font:400 23px Georgia,serif;color:#26354b;margin:0}
+.pl-pro-albums-header button,.pl-pro-import button{background:#273957;color:#fff;border:0;border-radius:99px;padding:11px 16px;font:600 12px 'Instrument Sans',Arial,sans-serif;cursor:pointer}
+.pl-pro-albums-list{display:flex;flex-direction:column;gap:8px}
+.pl-pro-albums-list button{display:flex;align-items:center;gap:9px;padding:12px 14px;background:rgba(255,255,255,.48);border:1px solid #e5dbcf;border-radius:11px;color:#273957;text-align:left;font:13px 'Instrument Sans',Arial,sans-serif}
+.pl-pro-albums-list button span{margin-left:auto;font-size:11px;color:#aaa098}
+.pl-pro-import{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:13px 0 6px}
+.pl-pro-import .pl-meta{font-size:12px}
+.pl-professional-job-link{display:flex;align-items:center;justify-content:space-between;gap:15px;width:100%;text-align:left;background:rgba(255,255,255,.38);border:1px solid #e5dbce;border-radius:10px;padding:13px 14px;margin:8px 0;color:#26354b}
+.pl-professional-job-link strong{display:block;font:600 14px 'Instrument Sans',Arial,sans-serif}
+.pl-professional-job-link small{font:12px 'Instrument Sans',Arial,sans-serif;color:#857c70}
