@@ -81,16 +81,18 @@
   busy=true;release();
   try{
    let album,links,sections=[],demo=false,empreendimento='';
-   const demoData=await sb.rpc('pl_demo_album_photos',{p_album_id:albumId});
+   const professional= document.querySelector('#pl-album-content')?.dataset.professional==='true';
+   const albumRPC=professional?'pl_album_fotos_profissionais':'pl_demo_album_photos';
+   const demoData=await sb.rpc(albumRPC,{p_album_id:albumId});
    if(!demoData.error&&demoData.data?.titulo){
-    demo=true;
+    demo=!professional;
     const d=demoData.data;
     album={id:albumId,titulo:d.titulo,assunto:d.assunto||'',data_vistoria:d.data};
-    const members=await sb.rpc('pl_demo_album_sections',{p_album_id:albumId});
+    const members=await sb.rpc(professional?'pl_album_secoes_profissionais':'pl_demo_album_sections',{p_album_id:albumId});
     if(!members.error&&Array.isArray(members.data))sections=members.data;
     links=(d.fotos||[]).map(f=>({ordem:f.numero,secao_id:f.secao_id,fotografias:{
-      id:f.id,metadados:{demo:true,referencia_url:f.url},nome_original:f.nome,
-      destaque:f.destaque,nivel_anomalia:f.anomalia,observacao_tecnica:f.observacao,
+      id:f.id,arquivo_caminho:f.arquivo_caminho||null,metadados:professional?(f.metadados||{}):{demo:true,referencia_url:f.url},nome_original:f.nome,
+      destaque:f.destaque,nivel_anomalia:f.anomalia||f.nivel_anomalia,observacao_tecnica:f.observacao||f.observacao_tecnica||f.legenda,
       oculta_relatorio:f.oculta,excluida_em:f.excluida?'excluida':null
     }}));
     try{
@@ -117,7 +119,7 @@
    // The photo table may not contain section_id in every RPC response.
    let sectionMemberships=[];
    try{
-    const rpcName=demo?'pl_demo_album_section_members':'pl_album_membros_profissionais';
+    const rpcName=professional?'pl_album_membros_profissionais':'pl_demo_album_section_members';
     const response=await sb.rpc(rpcName,{p_album_id:albumId});
     if(!response.error&&Array.isArray(response.data))sectionMemberships=response.data;
    }catch(e){console.warn('Vínculos de seções indisponíveis:',e)}
@@ -134,8 +136,8 @@
      fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:sectionByPhoto.get(String(f.id))||link.secao_id||null,
      secao_nome:sectionNames.get(String(sectionByPhoto.get(String(f.id))||link.secao_id))||f.secao_nome||f.nome_secao||'',
      incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
-     legenda:f.observacao_tecnica||f.observacao||f.legenda||'',
-     observacao:f.observacao_tecnica||f.observacao||f.legenda||'',destaque_no_relatorio:!!f.destaque,
+     legenda:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',
+     observacao:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',destaque_no_relatorio:!!f.destaque,
      fotos_por_pagina_override:null
     });
    }
