@@ -17,9 +17,9 @@
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!box.hidden&&!processing)close()});
  async function admin(){
   const {data:{session},error:e}=await sb.auth.getSession();
-  if(e||!session)throw new Error('Faça login com Google para criar álbuns profissionais.');
+  if(e||!session)throw new Error('Entre com Google para criar álbuns e importar fotografias.');
   const {data:profile,error}=await sb.rpc('pl_meu_perfil');
-  if(error||!profile?.ativo||profile.papel!=='administrador')throw new Error('A criação e importação de álbuns está habilitada apenas para administradores autorizados.');
+  if(error||!profile?.ativo||profile.papel!=='administrador')throw new Error('Esta conta ainda não está autorizada a criar álbuns ou importar fotografias.');
  }
  function formatDate(date){const d=date||new Date();return new Date(d).toLocaleDateString('pt-BR')}
  async function create(jobId,onCreated){
@@ -39,7 +39,7 @@
    if(titulo.length<3)return;
    processing=true;button.disabled=true;status.textContent='Criando álbum…';
    try{
-    const {data:id,error}=await sb.rpc('pl_album_criar_profissional',{p_job_id:jobId,p_titulo:titulo,p_data:null,p_assunto:assunto});
+    const {data:id,error}=await sb.rpc('pl_criar_album_no_job',{p_job_id:jobId,p_titulo:titulo,p_assunto:assunto});
     if(error||!id)throw error||new Error('Não foi possível criar o álbum.');
     processing=false;close();
     if(typeof onCreated==='function')await onCreated(id);
