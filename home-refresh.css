@@ -45,3 +45,23 @@ header .profile.pl-profile-seal{
 .pl-home-work-section .section-title h2,.pl-home-albums-section .section-title h2{font-family:'Libre Baskerville',Georgia,serif;font-style:normal}
 .pl-home-quote-wrap{padding:7px 0 10px}
 .pl-home-intro{min-height:108px!important}
+
+/* Home pessoal: frase original, busca e mascote grande, sem linguagem promocional. */
+.pl-home-quote{font-family:'Instrument Sans',Arial,sans-serif!important;font-weight:600!important;font-style:normal!important;font-size:clamp(17px,3.5vw,22px)!important;line-height:1.4!important;letter-spacing:0!important}
+.pl-home-quote-wrap{padding:2px 0 8px!important}
+.pl-home-eyebrow[hidden]{display:none!important}
+.pl-home-intro{min-height:92px!important}
+.pl-home-work-section .job:nth-child(n+3){display:flex}
+.pl-mascot-stage{
+ display:none;position:relative;margin:10px auto 20px;padding:0;overflow:hidden;
+ width:100%;height:clamp(260px,64vw,355px);align-items:center;justify-content:center;
+ border:0;background:transparent
+}
+.pl-mascot-stage.is-ready{display:flex}
+.pl-mascot-stage img{display:block;object-fit:contain;object-position:center center;width:100%;height:100%;border:0}
+@media(min-width:700px){
+ .pl-mascot-stage{height:380px;margin-block:16px 25px}
+}
+@media(prefers-color-scheme:dark){
+ .pl-mascot-stage{background:transparent}
+}
