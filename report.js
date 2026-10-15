@@ -432,10 +432,11 @@
    const rows=Math.ceil(p.size/columns);
    const name=state.empreendimento||state.album.titulo||'';
    const ref=state.album.data_vistoria?new Date(state.album.data_vistoria+'T12:00:00').toLocaleDateString('pt-BR'):'';
+   const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
    const cells=p.items.map(i=>{
     const anomaly=i.source.nivel_anomalia;
     const note=(i.legenda||'').trim();
-    const sectionCaption=showSectionNames?(i.secao_nome||'').trim():'';
+    const sectionCaption=showSectionNames&&sectionNames.length>1?(i.secao_nome||'').trim():'';
     const captions=[sectionCaption,showPhotoNotes?note:''].filter(Boolean);
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
@@ -446,7 +447,6 @@
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
      '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(escape).join(' · ')+'</figcaption>')+'</figure>';
    }).join('');
-   const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
    const section=showSectionNames&&sectionNames.length===1?sectionNames[0]:'';
    return '<section class="rf-sheet rf-layout-'+p.size+'" data-layout="'+p.size+'"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
     '<div class="rf-content"><div class="rf-report-head"><div class="rf-report-title">RELATÓRIO FOTOGRÁFICO</div>'+
@@ -588,7 +588,7 @@
       ctx.beginPath();ctx.roundRect(x,y,w,h,Math.min(r,w/3,h/3));ctx.closePath();
     };
     ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(sheet.querySelector('.rf-lauda'),0,0,canvas.width,canvas.height);
+    try{ctx.drawImage(sheet.querySelector('.rf-lauda'),0,0,canvas.width,canvas.height)}catch(e){throw new Error('Não foi possível ler a folha institucional do relatório: '+e.message)}
     const write=(el,color,fontWeight=400,align='left',complete=false)=>{
      if(!el||!el.textContent.trim())return;
      const p=pos(el),st=getComputedStyle(el),font=Math.max(8,parseFloat(st.fontSize)*sy);
@@ -636,7 +636,9 @@
      const srcW=p.w/cropScale,srcH=p.h/cropScale;
      const srcX=(photo.naturalWidth-srcW)/2,srcY=(photo.naturalHeight-srcH)/2;
      ctx.save();rounded(p.x,p.y,p.w,p.h,4*sx);ctx.clip();
-     ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h);ctx.restore();
+     try{ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h)}
+     catch(e){ctx.restore();throw new Error('Erro ao inserir a foto '+cell.dataset.photoNumber+' no PDF: '+e.message)}
+     ctx.restore();
      if(frame){ctx.strokeStyle='#b77c36';ctx.lineWidth=Math.max(3,3.6*sx);rounded(p.x,p.y,p.w,p.h,4*sx);ctx.stroke()}
      const number=cell.querySelector('.rf-number');
      if(number){
