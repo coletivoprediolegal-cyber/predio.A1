@@ -113,6 +113,15 @@
    if(generation!==revision)return;
    const signedURLs=demo?new Map():await signedPhotoURLs(links);
    if(generation!==revision)return;
+   // Retrieve actual memberships from the same organizer used in the album screen.
+   // The photo table may not contain section_id in every RPC response.
+   let sectionMemberships=[];
+   try{
+    const rpcName=demo?'pl_demo_album_section_members':'pl_album_membros_profissionais';
+    const response=await sb.rpc(rpcName,{p_album_id:albumId});
+    if(!response.error&&Array.isArray(response.data))sectionMemberships=response.data;
+   }catch(e){console.warn('Vínculos de seções indisponíveis:',e)}
+   const sectionByPhoto=new Map(sectionMemberships.map(x=>[String(x.fotografia_id),x.secao_id]));
    const sectionNames=new Map(sections.map(x=>[String(x.id),x.nome||x.nome_secao||x.titulo||'']));
    state={album,id:null,demo,empreendimento,titulo:'Relatório fotográfico',
     descricao:'',layout:12,items:[]};
@@ -122,8 +131,8 @@
     const url=demoPhotoURL(f)||(f.arquivo_caminho?signedURLs.get(f.arquivo_caminho):null);
     if(!url){console.warn('Fotografia sem URL disponível:',f.id);continue}
     state.items.push({
-     fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:link.secao_id||null,
-     secao_nome:sectionNames.get(String(link.secao_id))||f.secao_nome||f.nome_secao||'',
+     fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:sectionByPhoto.get(String(f.id))||link.secao_id||null,
+     secao_nome:sectionNames.get(String(sectionByPhoto.get(String(f.id))||link.secao_id))||f.secao_nome||f.nome_secao||'',
      incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
      legenda:f.observacao_tecnica||f.observacao||f.legenda||'',
      observacao:f.observacao_tecnica||f.observacao||f.legenda||'',destaque_no_relatorio:!!f.destaque,
@@ -513,7 +522,7 @@
   if(!element)return;
   const total=totalPages();previewIndex=Math.min(Math.max(0,previewIndex),Math.max(0,total-1));
   prepareSheets(element,true);updateCounts();
-  const hint=dialog.querySelector('#rf-text-hint');if(hint){const visible=state.items.filter(i=>i.incluir);const notes=visible.filter(i=>(i.legenda||'').trim()).length;const sections=visible.filter(i=>(i.secao_nome||'').trim()).length;hint.textContent=state.layout===36?'36 fotos: somente números e símbolos.':[(showPhotoNotes&&!notes?'Nenhuma observação cadastrada nas fotos incluídas.':''),(showSectionNames&&!sections?'Nenhuma seção vinculada às fotos incluídas.':'')].filter(Boolean).join(' ');}
+  const hint=dialog.querySelector('#rf-text-hint');if(hint){const visible=state.items.filter(i=>i.incluir);const notes=visible.filter(i=>(i.legenda||'').trim()).length;const sections=visible.filter(i=>(i.secao_nome||'').trim()).length;hint.textContent=state.layout===36?'36 fotos: somente números e símbolos.':[(showPhotoNotes&&!notes?'Sem observações vinculadas às fotografias incluídas — confira os registros do álbum.':''),(showSectionNames&&!sections?'Sem seções vinculadas às fotografias incluídas — confira a organização do álbum.':'')].filter(Boolean).join(' ');}
   const count=dialog.querySelector('#rf-preview-count');
   if(count)count.textContent=total?'Página '+(previewIndex+1)+' de '+total:'Sem fotografias';
   const prev=dialog.querySelector('#rf-page-prev'),next=dialog.querySelector('#rf-page-next');
