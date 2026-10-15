@@ -1,0 +1,41 @@
+/* Página inicial: editorial, acolhedora e alinhada à identidade Prédio Legal */
+.pl-home-intro{min-height:150px!important;align-items:center!important;margin-top:8px;isolation:isolate}
+.pl-home-intro .architecture{height:124px!important;width:70%;right:-8px;bottom:0;opacity:.18;z-index:-1}
+.pl-home-quote-wrap{position:relative;z-index:1;width:100%;padding:18px 0 20px}
+.pl-home-eyebrow{font:600 10px/1.4 'Instrument Sans',Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a88b68;margin-bottom:13px}
+.pl-home-quote{font:400 clamp(22px,5.3vw,30px)/1.27 'Instrument Serif',Georgia,serif!important;letter-spacing:-.015em;max-width:430px!important;margin:0 24px 14px 0!important;color:#203151}
+.pl-home-quote-refresh{background:transparent;border:0;padding:5px 9px 5px 0;color:#a08567;font:500 11px 'Instrument Sans',Arial,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pl-home-quote-refresh svg{width:13px;height:13px}
+.pl-home-quote-refresh:focus-visible{outline:2px solid #a98a61;outline-offset:3px}
+.pl-home-section-head{margin-bottom:12px}
+.pl-home-work-section{margin-top:27px}
+.pl-home-work-section .section-title h2{font:400 20px/1.3 'Libre Baskerville',Georgia,serif}
+.pl-home-work-description{font:11px/1.5 'Instrument Sans',Arial,sans-serif;color:#8c847a;margin:3px 0 10px}
+.pl-home-albums-section{margin-top:29px}
+.pl-home-albums-section .section-title h2{font:400 20px/1.3 'Libre Baskerville',Georgia,serif}
+.pl-home-work-section .job{padding:9px 10px;min-height:80px;gap:13px}
+.pl-home-work-section .job .client{letter-spacing:.05em}
+.pl-home-work-section .job .name{font-size:15px}
+.pl-home-work-section .job img{width:81px;height:66px}
+.pl-home-work-section .job .meta{color:#a49b8f}
+.pl-home-work-section .job:nth-child(n+3){display:none}
+.pl-home-work-section.is-expanded .job:nth-child(n+3){display:flex}
+.pl-home-work-section .pl-home-all-jobs{color:#a0764a}
+header .profile.pl-profile-seal{
+  width:35px;height:35px;top:10px;right:20px;display:flex;
+  align-items:center;justify-content:center;border:1px solid #bca78b;
+  border-radius:50%;background:transparent;color:#916b40;
+  box-shadow:inset 0 0 0 3px var(--paper),inset 0 0 0 4px rgba(157,125,89,.55);
+  font:600 12px/1 'Libre Baskerville',Georgia,serif;letter-spacing:-.07em;
+}
+.pl-profile-seal span{transform:translateY(.5px)}
+@media(prefers-color-scheme:dark){
+ .pl-home-quote{color:#f3eee6!important}
+ .pl-home-eyebrow{color:#ceae87}
+ .pl-home-quote-refresh{color:#c7a584}
+ .pl-home-work-description{color:#b5b0a8}
+ header .profile.pl-profile-seal{
+  background:rgba(214,203,187,.06);color:#e6d9c5;border-color:#b69a77;
+  box-shadow:inset 0 0 0 3px #081a34,inset 0 0 0 4px rgba(225,198,159,.58);
+ }
+}
