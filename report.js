@@ -5,6 +5,7 @@
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
  let albumChanged=false;
+ let showPhotoNotes=true,showSectionNames=true;
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
  function error(e){const box=dialog.querySelector('.rf-message');if(box)box.textContent=e.message||String(e)}
@@ -155,6 +156,9 @@
    '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
    '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+
    '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button></div>'+
+   '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
+   '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
+   '<span id="rf-text-hint"></span></div>'+
    '<p class="rf-message" role="status" aria-live="polite"></p>'+
    '<section class="rf-preview-area" aria-label="Prévia do relatório"><div class="rf-preview-top">'+
    '<strong>Prévia A4</strong><div class="rf-page-tools"><button id="rf-page-prev" type="button" aria-label="Página anterior">‹</button>'+
@@ -172,6 +176,8 @@
   dialog.querySelector('#rf-close').onclick=close;
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
   dialog.querySelector('#rf-pdf').onclick=exportPDF;
+  dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;preview()};
+  dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;preview()};
   dialog.querySelector('#rf-page-prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);preview()};
   dialog.querySelector('#rf-page-next').onclick=()=>{previewIndex=Math.min(totalPages()-1,previewIndex+1);preview()};
   dialog.querySelector('#rf-advanced').addEventListener('toggle',e=>{if(e.target.open)rows()});
@@ -429,6 +435,8 @@
    const cells=p.items.map(i=>{
     const anomaly=i.source.nivel_anomalia;
     const note=(i.legenda||'').trim();
+    const sectionCaption=showSectionNames?(i.secao_nome||'').trim():'';
+    const captions=[sectionCaption,showPhotoNotes?note:''].filter(Boolean);
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
@@ -436,10 +444,10 @@
      '<span class="rf-number">'+(featured?'★ ':'')+escape(String(i.numero).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
-     '</div>'+(p.size===36?'':'<figcaption class="rf-caption">'+(note?escape(note):'')+'</figcaption>')+'</figure>';
+     '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(escape).join(' · ')+'</figcaption>')+'</figure>';
    }).join('');
    const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
-   const section=sectionNames.length===1?sectionNames[0]:'';
+   const section=showSectionNames&&sectionNames.length===1?sectionNames[0]:'';
    return '<section class="rf-sheet rf-layout-'+p.size+'" data-layout="'+p.size+'"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
     '<div class="rf-content"><div class="rf-report-head"><div class="rf-report-title">RELATÓRIO FOTOGRÁFICO</div>'+
     '<div class="rf-report-enterprise">'+escape(name)+'</div>'+
@@ -505,6 +513,7 @@
   if(!element)return;
   const total=totalPages();previewIndex=Math.min(Math.max(0,previewIndex),Math.max(0,total-1));
   prepareSheets(element,true);updateCounts();
+  const hint=dialog.querySelector('#rf-text-hint');if(hint)hint.textContent=state.layout===36?'36 fotos: somente números e símbolos.':'';
   const count=dialog.querySelector('#rf-preview-count');
   if(count)count.textContent=total?'Página '+(previewIndex+1)+' de '+total:'Sem fotografias';
   const prev=dialog.querySelector('#rf-page-prev'),next=dialog.querySelector('#rf-page-next');
