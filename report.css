@@ -125,6 +125,8 @@
 .rf-inclusion{flex:none;white-space:nowrap;font-size:12px}
 .rf-row .rf-drag-handle{flex:none;display:grid;place-items:center;min-width:29px;width:29px;min-height:39px;padding:0;border:0;background:transparent;color:#928879;font-size:25px;line-height:1;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;outline-offset:0}
 .rf-row .rf-drag-handle:active{color:#273853;cursor:grabbing}
+.rf-row>img{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.rf-row>img:active{cursor:grabbing}
 .rf-row .rf-mark{display:grid;place-items:center;flex:none;width:30px;min-width:30px;min-height:32px;padding:0;border:1px solid rgba(146,135,117,.22);border-radius:10px;background:rgba(255,255,255,.24);font-size:19px;line-height:1;color:#ada89f;cursor:pointer}
 .rf-row .rf-highlight-mark.is-marked{color:#ab7128;background:#f7eddb;border-color:#c49b60}
 .rf-row .rf-anomaly-mark.rf-anomaly-yellow{color:#d49c18;background:#fdf3d8;border-color:#e7c36b}
