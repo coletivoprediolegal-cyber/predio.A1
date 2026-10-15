@@ -167,8 +167,8 @@
   reportWritePending=true;
   if(action==='anomalia')item.source.nivel_anomalia=value;
   else{item.destaque_no_relatorio=value;item.source.destaque=value}
-  preview();rows();
   try{
+   preview();rows();
    const payload=action==='anomalia'?{id:item.fotografia_id,nivel:value}:{id:item.fotografia_id,destaque:value};
    const result=await sb.rpc('pl_report_album_edit',{p_album_id:state.album.id,p_action:action,p_payload:payload});
    if(result.error||!result.data?.ok)throw result.error||new Error('Não foi possível confirmar a alteração');
@@ -341,8 +341,9 @@
   const original=state.items.slice();
   sorted.forEach((slot,n)=>{state.items[slot]=original[indices[n]]});
   const oldNumbers=[...original].map(item=>item.numero);
-  reportWritePending=true;preview();rows();
+  reportWritePending=true;
   try{
+   preview();rows();
    const result=await sb.rpc('pl_report_album_edit',{
     p_album_id:state.album.id,p_action:'reorder',
     p_payload:{ids:state.items.map(item=>item.fotografia_id)}
