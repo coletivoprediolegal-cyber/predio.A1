@@ -99,7 +99,7 @@ renderHome();
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[ch]));
 const money=v=>v==null?'Não informado':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v));
-let directory=[],current='home';
+let directory=[],current='home',professionalJob=null,professionalJobs=[];
 function switchTo(page){
 current=page;$('.container:not(.pl-screen)').style.display=page==='home'?'':'none';
 $('#pl-clients').classList.toggle('visible',page==='clients');
@@ -128,6 +128,7 @@ function fold(title,body,count,expanded){
 return '<details class="pl-fold"'+(expanded?' open':'')+'><summary>'+esc(title)+(count===null?'':' ('+count+')')+'</summary><div class="pl-fold-body">'+body+'</div></details>';
 }
 async function openJob(id){
+professionalJob=null;
 const j=(activeClient?.jobs||[]).find(x=>x.id===id);if(!j)return;
 $('#pl-job-content').innerHTML='<p class="pl-empty">Carregando pasta do job...</p>';switchTo('job');
 const [{data,error},{data:faturamento,error:fatError},{data:extras}]=await Promise.all([window.plSupabase.rpc('pl_demo_job_contents',{p_job_id:id}),window.plSupabase.rpc('pl_demo_job_faturamento',{p_job_id:id}),window.plSupabase.rpc('pl_demo_job_extra_photos',{p_job_id:id})]);
@@ -150,10 +151,10 @@ const msg=['Razão social: '+fat.razao_social,'CNPJ: '+fat.cnpj,'CCM: '+fat.ccm,
 try{await navigator.clipboard.writeText(msg);btn.textContent='✓ Copiado';setTimeout(()=>btn.textContent='⧉ Copiar',1800)}catch(e){btn.textContent='Falha ao copiar';console.warn('Clipboard indisponível',e)}
 }));
 }
-let albumAtual=null,albumFotos=[],albumFiltro='todas',albumIncluiExcluidas=false;
-const imageSafe=u=>typeof u==='string'&&/^https:\/\/images\.unsplash\.com\/photo-[\w-]+/.test(u)?u:'';
-async function openAlbum(id){
-albumAtual=id;document.querySelector('#pl-album-content').dataset.albumId=id;albumFiltro='todas';albumIncluiExcluidas=false;$('#pl-album-content').innerHTML='<p class="pl-empty">Carregando fotografias...</p>';switchTo('album');
+let albumAtual=null,albumFotos=[],albumFiltro='todas',albumIncluiExcluidas=false,albumProfessional=false;
+const imageSafe=u=>{if(typeof u!=='string')return '';try{const target=new URL(u);const endpoint=new URL(window.plSupabase.supabaseUrl);return target.protocol==='https:'&&(/^https:\/\/images\.unsplash\.com\/photo-[\w-]+/.test(u)||(target.origin===endpoint.origin&&target.pathname.startsWith('/storage/v1/object/sign/predio-legal-fotos/')))?u:''}catch(e){return ''}};
+async function openAlbum(id,professional=false){
+albumProfessional=!!professional;albumAtual=id;document.querySelector('#pl-album-content').dataset.albumId=id;document.querySelector('#pl-album-content').dataset.professional=String(albumProfessional);albumFiltro='todas';albumIncluiExcluidas=false;$('#pl-album-content').innerHTML='<p class="pl-empty">Carregando fotografias...</p>';switchTo('album');
 await reloadAlbum();
 }
 async function newAlbum(jobId){
@@ -180,10 +181,20 @@ if(error||!data)return alert('Não foi possível vincular.');
 await reloadAlbum();alert('Fotografia vinculada ao job sem duplicar o arquivo.');
 }
 async function reloadAlbum(){
-const {data,error}=await window.plSupabase.rpc('pl_demo_album_photos',{p_album_id:albumAtual});
+const {data,error}=await window.plSupabase.rpc(albumProfessional?'pl_album_fotos_profissionais':'pl_demo_album_photos',{p_album_id:albumAtual});
+if(albumProfessional&&!error&&data?.fotos?.length){
+ const photos=data.fotos;const store=window.plSupabase.storage.from('predio-legal-fotos');
+ for(let offset=0;offset<photos.length;offset+=100){
+  const batch=photos.slice(offset,offset+100);
+  const result=await store.createSignedUrls(batch.map(f=>f.arquivo_caminho),3600);
+  if(result.error){console.warn('Fotografias protegidas indisponíveis:',result.error.message);continue}
+  batch.forEach((photo,index)=>photo.url=result.data?.[index]?.signedUrl||'');
+ }
+}
 if(error||!data?.titulo){$('#pl-album-content').innerHTML='<p class="pl-error">Não foi possível carregar este álbum.</p>';return}
 albumFotos=data.fotos||[];
-$('#pl-album-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">ÁLBUM FOTOGRÁFICO · DEMO</div><h1>'+esc(data.titulo)+'</h1><div class="pl-meta">'+esc(data.assunto||'')+(data.assunto?' · ':'')+esc(data.data?data.data.split('-').reverse().join('/'):'Sem data')+' · '+albumFotos.length+' fotos</div></div><div class="pl-filter-bar" id="pl-filters"><button data-filter="todas">Todas</button><button data-filter="destaques">★ Destaques</button><button data-filter="anomalias">⚠ Anomalias</button><button data-filter="ocultas">Ocultas</button><button data-filter="observacoes">Notas</button></div><label class="pl-show-deleted"><input type="checkbox" id="pl-show-deleted"> Exibir excluídas</label><div class="pl-photo-grid" id="pl-photo-grid"></div><p class="pl-meta" style="margin-top:18px">As imagens desta demonstração são referências ilustrativas, não fotografias armazenadas no Supabase.</p>';
+$('#pl-album-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">'+(albumProfessional?'ÁLBUM FOTOGRÁFICO · PROFISSIONAL':'ÁLBUM FOTOGRÁFICO · DEMO')+'</div><h1>'+esc(data.titulo)+'</h1><div class="pl-meta">'+esc(data.assunto||'')+(data.assunto?' · ':'')+esc(data.data?data.data.split('-').reverse().join('/'):'Sem data')+' · '+albumFotos.length+' fotos</div></div>'+(albumProfessional?'<div class="pl-pro-import"><button type="button" id="pl-import-photos">＋ Adicionar fotografias</button><span class="pl-meta">Em lote · qualidade original</span></div>':'')+'<div class="pl-filter-bar" id="pl-filters"><button data-filter="todas">Todas</button><button data-filter="destaques">★ Destaques</button><button data-filter="anomalias">⚠ Anomalias</button><button data-filter="ocultas">Ocultas</button><button data-filter="observacoes">Notas</button></div><label class="pl-show-deleted"><input type="checkbox" id="pl-show-deleted"> Exibir excluídas</label><div class="pl-photo-grid" id="pl-photo-grid"></div>'+(albumProfessional?'':'<p class="pl-meta" style="margin-top:18px">As imagens desta demonstração são referências ilustrativas, não fotografias armazenadas no Supabase.</p>');
+if(albumProfessional)$('#pl-import-photos')?.addEventListener('click',()=>window.PLAlbumImport?.pickPhotos(albumAtual,()=>reloadAlbum()));
 $('#pl-filters').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{albumFiltro=b.dataset.filter;renderPhotos()}));
 $('#pl-show-deleted').addEventListener('change',e=>{albumIncluiExcluidas=e.target.checked;renderPhotos()});
 renderPhotos();
@@ -197,7 +208,7 @@ $('#pl-photo-grid').innerHTML=fotos.length?fotos.map(f=>{
 const src=imageSafe(f.url);
 return '<article class="pl-photo-card'+(f.excluida?' pl-photo-deleted':'')+(f.oculta?' pl-photo-hidden':'')+'"><button class="pl-photo-preview" data-preview="'+esc(f.id)+'" aria-label="Ampliar foto '+esc(f.numero)+'">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="Fotografia '+esc(f.numero)+'">':'<span>Sem imagem</span>')+'<span class="pl-photo-num">'+esc(f.numero)+'</span>'+(f.observacao?'<span class="pl-photo-has-note" title="Possui observação">▤</span>':'')+'</button><div class="pl-photo-actions"><button data-act="'+(f.excluida?'restaurar':'excluir')+'" data-id="'+esc(f.id)+'" title="'+(f.excluida?'Restaurar':'Excluir')+'">'+(f.excluida?'↶':'<svg class="pl-trash-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 4h4m-8 3 1 13h10l1-13M10 11v6m4-6v6"/></svg>')+'</button><button data-act="ocultar" data-id="'+esc(f.id)+'" class="'+(f.oculta?'marked':'')+'" title="Ocultar do relatório">−</button><button data-act="destaque" data-id="'+esc(f.id)+'" class="'+(f.destaque?'marked':'')+'" title="Destaque">★</button><button data-act="anomalia" data-id="'+esc(f.id)+'" class="'+(f.anomalia?'anomaly-'+esc(f.anomalia):'')+'" title="Anomalia" aria-label="Alternar anomalia"><svg class="pl-warning-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5Z" fill="currentColor"/><path d="M12 9v5.5" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.2" fill="#fff"/></svg></button></div></article>'
 }).join(''):'<p class="pl-empty">Nenhuma fotografia neste filtro.</p>';
-$('#pl-photo-grid').querySelectorAll('[data-preview]').forEach(b=>b.addEventListener('click',()=>{const f=albumFotos.find(x=>x.id===b.dataset.preview);const src=imageSafe(f?.url);if(!src)return;$('#pl-lightbox-img').src=src;$('#pl-lightbox-label').textContent='Foto '+String(f.numero).padStart(2,'0');const dt=f.capturada_em?new Date(f.capturada_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Data e hora não registradas';$('#pl-lightbox-meta').innerHTML='<p class="pl-photo-meta-line">Foto '+esc(String(f.numero).padStart(2,'0'))+' · '+esc(dt)+'</p>'+(f.observacao?'<p class="pl-photo-observation">'+esc(f.observacao)+'</p>':'')+(f.anomalia?'<div class="pl-photo-status">⚠ Anomalia '+esc(f.anomalia)+'</div>':f.destaque?'<div class="pl-photo-status">★ Destaque</div>':'')+'<button id="pl-edit-photo-note" type="button">✎ '+(f.observacao?'Editar observação':'Adicionar observação')+'</button><button id="pl-link-job">＋ Vincular a outro job</button>';$('#pl-edit-photo-note').addEventListener('click',async()=>{await changePhoto(f.id,'observacao');const updated=albumFotos.find(x=>x.id===f.id);if(updated){$('#pl-lightbox-meta').querySelector('p')?.remove();const note=document.createElement('p');note.textContent=updated.observacao||'Sem observação';$('#pl-lightbox-meta').insertBefore(note,$('#pl-edit-photo-note'));$('#pl-edit-photo-note').textContent=updated.observacao?'✎ Editar observação':'✎ Adicionar observação'}});$('#pl-link-job').addEventListener('click',()=>{ $('#pl-lightbox').hidden=true;linkPhotoToJob(f.id)});$('#pl-lightbox').hidden=false}));
+$('#pl-photo-grid').querySelectorAll('[data-preview]').forEach(b=>b.addEventListener('click',()=>{const f=albumFotos.find(x=>x.id===b.dataset.preview);const src=imageSafe(f?.url);if(!src)return;$('#pl-lightbox-img').src=src;$('#pl-lightbox-label').textContent='Foto '+String(f.numero).padStart(2,'0');const dt=f.capturada_em?new Date(f.capturada_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Data e hora não registradas';$('#pl-lightbox-meta').innerHTML='<p class="pl-photo-meta-line">Foto '+esc(String(f.numero).padStart(2,'0'))+' · '+esc(dt)+'</p>'+(f.observacao?'<p class="pl-photo-observation">'+esc(f.observacao)+'</p>':'')+(f.anomalia?'<div class="pl-photo-status">⚠ Anomalia '+esc(f.anomalia)+'</div>':f.destaque?'<div class="pl-photo-status">★ Destaque</div>':'')+'<button id="pl-edit-photo-note" type="button">✎ '+(f.observacao?'Editar observação':'Adicionar observação')+'</button>'+(albumProfessional?'':'<button id="pl-link-job">＋ Vincular a outro job</button>');$('#pl-edit-photo-note').addEventListener('click',async()=>{await changePhoto(f.id,'observacao');const updated=albumFotos.find(x=>x.id===f.id);if(updated){$('#pl-lightbox-meta').querySelector('p')?.remove();const note=document.createElement('p');note.textContent=updated.observacao||'Sem observação';$('#pl-lightbox-meta').insertBefore(note,$('#pl-edit-photo-note'));$('#pl-edit-photo-note').textContent=updated.observacao?'✎ Editar observação':'✎ Adicionar observação'}});$('#pl-link-job')?.addEventListener('click',()=>{ $('#pl-lightbox').hidden=true;linkPhotoToJob(f.id)});$('#pl-lightbox').hidden=false}));
 $('#pl-photo-grid').querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>changePhoto(b.dataset.id,b.dataset.act)));
 if(document.querySelector('#pl-section-controls'))window.plAlbumOrganizer?.refresh();
 }
@@ -209,7 +220,7 @@ if(acao==='ocultar')valor=String(!f.oculta);
 if(acao==='anomalia')valor=f.anomalia==='amarela'?'vermelha':f.anomalia==='vermelha'?null:'amarela';
 if(acao==='observacao'){valor=prompt('Observação técnica (opcional)',f.observacao||'');if(valor===null)return}
 const btn=$('#pl-photo-grid [data-id="'+id+'"][data-act="'+acao+'"]');if(btn)btn.disabled=true;
-const {data,error}=await window.plSupabase.rpc('pl_demo_photo_update',{p_album_id:albumAtual,p_foto_id:id,p_acao:acao,p_valor:valor});
+const {data,error}=await window.plSupabase.rpc(albumProfessional?'pl_album_foto_atualizar_profissional':'pl_demo_photo_update',{p_album_id:albumAtual,p_foto_id:id,p_acao:acao,p_valor:valor});
 if(error||!data){alert('Não foi possível salvar a alteração.');if(btn)btn.disabled=false;return}
 await reloadAlbum();
 }
