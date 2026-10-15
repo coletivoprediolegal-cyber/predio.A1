@@ -65,3 +65,9 @@ header .profile.pl-profile-seal{
 @media(prefers-color-scheme:dark){
  .pl-mascot-stage{background:transparent}
 }
+
+/* Imagem editorial sempre visível, mantendo a tipografia original sem itálico. */
+.pl-mascot-stage{display:flex;min-height:260px;border-radius:12px;background:rgba(110,125,142,.06)}
+.pl-mascot-stage img{width:100%;height:100%;object-fit:cover;object-position:center}
+.pl-home-quote,.pl-home-quote *{font-family:'Instrument Sans',Arial,sans-serif!important;font-style:normal!important}
+@media(prefers-color-scheme:dark){.pl-mascot-stage{background:rgba(255,255,255,.035)}}
