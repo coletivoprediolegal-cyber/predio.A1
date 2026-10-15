@@ -58,7 +58,7 @@
   if(ext==='heif')return{extension:ext,mime:'image/heif'};
   return null;
  }
- async function pickPhotos(albumId,onImported){
+ async function pickDevicePhotos(albumId,onImported){
   try{await admin()}catch(e){alert(e.message);return}
   const input=document.createElement('input');
   input.type='file';input.accept='image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
@@ -120,5 +120,132 @@
   }
   content.querySelector('#pl-import-done').onclick=close;
  }
- window.PLAlbumImport={create,pickPhotos};
+ 
+ // A seleção em nuvem é sempre iniciada por gesto do usuário; não acessa a biblioteca inteira.
+ let pickerSession=null,pickerAlbum=null,pickerCallback=null,pickerPolling=false,pickerStopped=false;
+ async function googleApi(action,details={}){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.provider_token)throw new Error('Autorize o Google Fotos para selecionar fotografias.');
+  const {data:response,error}=await sb.functions.invoke('pl-google-photos',{
+   body:{action,googleToken:session.provider_token,...details}
+  });
+  if(error)throw new Error('Importação indisponível: '+(error.message||'serviço não respondeu'));
+  if(response?.error)throw new Error(response.error);
+  return response;
+ }
+ async function googleConsent(){
+  sessionStorage.setItem('pl-google-pending-album',pickerAlbum);
+  const {error}=await sb.auth.signInWithOAuth({
+   provider:'google',options:{
+    redirectTo:location.origin+location.pathname,
+    scopes:'https://www.googleapis.com/auth/photospicker.mediaitems.readonly',
+    queryParams:{prompt:'consent'}
+   }
+  });
+  if(error)throw error;
+ }
+ function googleMessage(text,warning=false){
+  const status=content.querySelector('.pl-import-status');
+  if(status){status.textContent=text;status.style.color=warning?'#a33f34':''}
+ }
+ async function googlePhotos(albumId,onImported){
+  try{await admin()}catch(e){alert(e.message);return}
+  pickerAlbum=albumId;pickerCallback=onImported||null;pickerPolling=false;pickerStopped=false;show();
+  content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Google Fotos</h2>'+
+   '<p class="pl-import-description">Escolha várias fotografias no seletor oficial do Google. Elas serão copiadas para este álbum do Prédio Legal, sem apagar os originais.</p>'+
+   '<p class="pl-import-status" role="status">Abrindo seletor…</p>'+
+   '<div class="pl-import-actions"><button class="pl-import-secondary" id="pl-google-consent">Autorizar Google Fotos</button><button class="pl-import-secondary" id="pl-google-cancel">Cancelar</button></div>';
+  content.querySelector('#pl-google-cancel').onclick=()=>{pickerPolling=false;close()};
+  content.querySelector('#pl-google-consent').onclick=async()=>{try{await googleConsent()}catch(e){googleMessage(e.message,true)}};
+  let result;
+  try{result=await googleApi('create')}
+  catch(e){googleMessage(e.message+' Se ainda não autorizou a seleção, toque em “Autorizar Google Fotos”.',true);return}
+  if(!result?.id||!result?.pickerUri){googleMessage('O Google não retornou uma sessão de seleção.',true);return}
+  pickerSession=result.id;pickerPolling=true;
+  content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Selecionar no Google Fotos</h2>'+
+   '<p class="pl-import-description">Toque em Abrir Google Fotos, selecione as imagens e conclua a escolha. A seleção pode conter centenas de fotografias.</p>'+
+   '<div class="pl-import-actions"><a class="pl-import-primary" id="pl-google-open" href="'+html(result.pickerUri)+'" target="_blank" rel="noopener noreferrer">Abrir Google Fotos ↗</a>'+
+   '<button type="button" class="pl-import-secondary" id="pl-google-check">Conferir seleção</button></div>'+
+   '<p class="pl-import-status" role="status">Aguardando seleção…</p>';
+  content.querySelector('#pl-google-check').onclick=checkGoogle;
+  (async()=>{let delay=5000;
+   while(pickerPolling&&!box.hidden){
+    await new Promise(resolve=>setTimeout(resolve,delay));
+    if(!pickerPolling||box.hidden)break;
+    if(document.visibilityState==='hidden')continue;
+    try{
+     const status=await googleApi('status',{sessionId:pickerSession});
+     if(status.mediaItemsSet){pickerPolling=false;await finishGooglePick();break}
+     delay=Math.max(2000,Math.min(15000,parseFloat(status.pollingConfig?.pollInterval||'5')*1000));
+    }catch(e){pickerPolling=false;googleMessage(e.message,true)}
+   }
+  })();
+ }
+ async function checkGoogle(){
+  try{
+   const status=await googleApi('status',{sessionId:pickerSession});
+   if(status.mediaItemsSet){pickerPolling=false;await finishGooglePick()}
+   else googleMessage('Conclua a seleção no Google Fotos e retorne ao Prédio Legal.');
+  }catch(e){googleMessage(e.message,true)}
+ }
+ async function finishGooglePick(){
+  try{
+   let items=[],token='';
+   do{
+    const r=await googleApi('list',{sessionId:pickerSession,...(token?{pageToken:token}:{})});
+    items.push(...(r.mediaItems||[]));token=r.nextPageToken||'';
+   }while(token);
+   const selected=items.filter(item=>item.type==='PHOTO');
+   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Importar para o álbum</h2>'+
+    '<p class="pl-import-description">'+selected.length+' fotografias selecionadas'+(items.length>selected.length?' · '+(items.length-selected.length)+' vídeos ignorados':'')+'. Os arquivos serão importados um de cada vez, mantendo a resolução disponível.</p>'+
+    '<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-google-import" '+(selected.length?'':'disabled')+'>Importar '+selected.length+' fotografias</button>'+
+    '<button type="button" class="pl-import-secondary" id="pl-google-back">Cancelar</button></div>'+
+    '<progress max="'+selected.length+'" value="0" id="pl-google-progress"></progress><p class="pl-import-status" role="status"></p>';
+   content.querySelector('#pl-google-back').onclick=()=>{pickerStopped=true;close()};
+   content.querySelector('#pl-google-import').onclick=()=>importGoogleItems(selected);
+  }catch(e){googleMessage(e.message,true)}
+ }
+ async function importGoogleItems(items){
+  if(processing)return;processing=true;pickerStopped=false;
+  let saved=0,duplicates=0,failed=0,firstError='';
+  const btn=content.querySelector('#pl-google-import'),cancel=content.querySelector('#pl-google-back');
+  btn.disabled=true;cancel.textContent='Parar após esta foto';cancel.onclick=()=>{pickerStopped=true;cancel.disabled=true};
+  for(let i=0;i<items.length&&!pickerStopped;i++){
+   googleMessage('Importando '+(i+1)+' de '+items.length+'…');
+   try{
+    const res=await googleApi('import',{albumId:pickerAlbum,item:items[i]});
+    if(res.duplicada)duplicates++;else saved++;
+   }catch(e){
+    failed++;if(!firstError)firstError=e.message;
+    if(/expirad|Autorize|Sessão/.test(e.message||''))break;
+   }
+   content.querySelector('#pl-google-progress').value=i+1;
+  }
+  processing=false;
+  googleMessage(saved+' importadas · '+duplicates+' já existentes · '+failed+' com falha.'+(firstError?' '+firstError:''),failed>0);
+  content.querySelector('.pl-import-actions').innerHTML='<button class="pl-import-primary" id="pl-google-done" type="button">Voltar ao álbum</button>';
+  if(typeof pickerCallback==='function'){try{await pickerCallback(saved)}catch(e){console.warn(e)}}
+  content.querySelector('#pl-google-done').onclick=close;
+  if(pickerSession){googleApi('cleanup',{sessionId:pickerSession}).catch(()=>{});pickerSession=null}
+ }
+ async function pickPhotos(albumId,onImported){
+  try{await admin()}catch(e){alert(e.message);return}
+  show();pickerPolling=false;
+  content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Adicionar fotografias</h2>'+
+   '<p class="pl-import-description">Selecione muitas imagens de uma só vez. Não é necessário inseri-las individualmente.</p>'+
+   '<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-from-google">Google Fotos</button>'+
+   '<button type="button" class="pl-import-secondary" id="pl-from-device">Do dispositivo</button></div>';
+  content.querySelector('#pl-from-google').onclick=()=>googlePhotos(albumId,onImported);
+  content.querySelector('#pl-from-device').onclick=()=>{close();pickDevicePhotos(albumId,onImported)};
+ }
+ // Restaurar a seleção iniciada antes do redirecionamento do Google OAuth.
+ sb.auth.getSession().then(async({data})=>{
+  const pending=sessionStorage.getItem('pl-google-pending-album');
+  if(pending&&data.session){
+   sessionStorage.removeItem('pl-google-pending-album');
+   await googlePhotos(pending,null);
+  }
+ }).catch(console.warn);
+
+ window.PLAlbumImport={create,pickPhotos,pickGooglePhotos:googlePhotos};
 })();
