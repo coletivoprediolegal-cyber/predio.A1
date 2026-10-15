@@ -241,57 +241,6 @@
   if(pickerSession){googleApi('cleanup',{sessionId:pickerSession}).catch(()=>{});pickerSession=null}
  }
 
- async function prepareDemoImport(albumId,onActivated){
-  if(processing)return;
-  show();
-  content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS REAIS</div>'+
-   '<h2>Adicionar fotografias</h2>'+
-   '<p class="pl-import-description">Este álbum já pertence ao job em que você o criou. Vamos mantê-lo nesse mesmo job e proteger suas fotografias com acesso privado.</p>'+
-   '<p class="pl-import-status" role="status">Verificando sua conta…</p>';
-  const {data:{session},error:sessionError}=await sb.auth.getSession();
-  if(sessionError){content.querySelector('.pl-import-status').textContent=sessionError.message;return}
-  if(!session){
-   content.innerHTML+='<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-demo-google-login">Entrar com Google</button>'+
-    '<button type="button" class="pl-import-secondary" id="pl-demo-cancel">Cancelar</button></div>';
-   content.querySelector('.pl-import-status').textContent='Entre com sua conta administradora para armazenar fotos reais.';
-   content.querySelector('#pl-demo-cancel').onclick=close;
-   content.querySelector('#pl-demo-google-login').onclick=async()=>{
-    sessionStorage.setItem('pl-pending-demo-import',albumId);
-    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});
-    if(error){sessionStorage.removeItem('pl-pending-demo-import');content.querySelector('.pl-import-status').textContent=error.message}
-   };
-   return;
-  }
-  try{await admin()}catch(e){
-   content.querySelector('.pl-import-status').textContent=e.message||'Conta sem permissão';
-   content.insertAdjacentHTML('beforeend','<div class="pl-import-actions"><button class="pl-import-secondary" id="pl-demo-close" type="button">Fechar</button></div>');
-   content.querySelector('#pl-demo-close').onclick=close;
-   return;
-  }
-  content.innerHTML+='<p class="pl-import-description">O nome, o assunto, as seções e o vínculo original serão preservados. O álbum deixará de ser demonstrativo e somente pessoas autorizadas terão acesso às fotografias.</p>'+
-   '<div class="pl-import-actions"><button type="button" class="pl-import-secondary" id="pl-demo-cancel">Cancelar</button>'+
-   '<button type="button" class="pl-import-primary" id="pl-demo-activate">Continuar para fotos</button></div>';
-  content.querySelector('.pl-import-status').textContent='';
-  content.querySelector('#pl-demo-cancel').onclick=close;
-  content.querySelector('#pl-demo-activate').onclick=async()=>{
-   if(processing)return;
-   const button=content.querySelector('#pl-demo-activate');
-   button.disabled=true;processing=true;
-   const status=content.querySelector('.pl-import-status');
-   status.textContent='Protegendo o álbum no job original…';
-   try{
-    const {data,error}=await sb.rpc('pl_privativar_album_demo_vazio',{p_album_id:albumId});
-    if(error||data!==albumId)throw error||new Error('Não foi possível proteger o álbum');
-    processing=false;
-    close();
-    if(typeof onActivated==='function')await onActivated(albumId);
-    else location.reload();
-   }catch(e){
-    processing=false;button.disabled=false;
-    status.textContent=e.message||'Não foi possível preparar o álbum.';
-   }
-  };
- }
  async function pickPhotos(albumId,onImported){
   try{await admin()}catch(e){alert(e.message);return}
   show();pickerPolling=false;
@@ -303,14 +252,6 @@
   content.querySelector('#pl-from-device').onclick=()=>{close();pickDevicePhotos(albumId,onImported)};
   content.querySelector('#pl-from-google').onclick=()=>googlePhotos(albumId,onImported);
  }
- // Retomar o álbum demonstrativo depois do login exigido para importar fotos reais.
- sb.auth.getSession().then(({data})=>{
-  const pending=sessionStorage.getItem('pl-pending-demo-import');
-  if(pending&&data.session){
-   sessionStorage.removeItem('pl-pending-demo-import');
-   window.dispatchEvent(new CustomEvent('pl:resume-demo-import',{detail:{albumId:pending}}));
-  }
- }).catch(console.warn);
  // Restaurar a seleção iniciada antes do redirecionamento do Google OAuth.
  sb.auth.getSession().then(async({data})=>{
   const pending=sessionStorage.getItem('pl-google-pending-album');
@@ -320,5 +261,5 @@
   }
  }).catch(console.warn);
 
- window.PLAlbumImport={create,pickPhotos,pickGooglePhotos:googlePhotos,prepareDemoImport};
+ window.PLAlbumImport={create,pickPhotos,pickGooglePhotos:googlePhotos};
 })();
