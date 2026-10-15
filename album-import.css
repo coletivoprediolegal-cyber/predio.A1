@@ -30,3 +30,8 @@
 .pl-professional-job-link{display:flex;align-items:center;justify-content:space-between;gap:15px;width:100%;text-align:left;background:rgba(255,255,255,.38);border:1px solid #e5dbce;border-radius:10px;padding:13px 14px;margin:8px 0;color:#26354b}
 .pl-professional-job-link strong{display:block;font:600 14px 'Instrument Sans',Arial,sans-serif}
 .pl-professional-job-link small{font:12px 'Instrument Sans',Arial,sans-serif;color:#857c70}
+
+
+.pl-import-job-label{display:flex;flex-direction:column;gap:7px;margin:12px 0 15px;font:600 12px/1.4 'Instrument Sans',Arial,sans-serif;color:#525768}
+.pl-import-job-label select{display:block;width:100%;min-height:44px;border:1px solid #dbcebf;border-radius:12px;padding:9px 11px;background:#fffdf8;color:#26354b;font:13px/1.4 'Instrument Sans',Arial,sans-serif;text-overflow:ellipsis}
+.pl-import-job-label select:focus-visible{outline:2px solid #25344e;outline-offset:2px}
