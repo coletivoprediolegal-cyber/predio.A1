@@ -10,7 +10,7 @@
   #pl-album-content {width:100%;max-width:none}
   #pl-album .pl-photo-grid {
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(148px,1fr));
+    grid-template-columns:repeat(auto-fill,minmax(128px,1fr));
     gap:12px;
     width:100%;
     margin-inline:0;
@@ -27,8 +27,8 @@
 }
 @media(min-width:1280px){
   #pl-album.container {width:calc(100% - 44px)}
-  #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:12px}
 }
 @media(min-width:1920px){
-  #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+  #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
 }
