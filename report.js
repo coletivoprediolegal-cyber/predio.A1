@@ -93,22 +93,106 @@
  }
  async function close(){if(busy)return;if(!(await discard()))return;dialog.hidden=true;release();state=null;dirty=false;document.querySelector('#rf-print')?.remove();opener?.focus()}
  function options(selected){return core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' fotos por página</option>').join('')}
+ let previewIndex=0,editFilter='all',editQuery='',editsVisible=30;
+ function totalPages(){return core.paginate(state.items,state.layout).length}
+ function countIncluded(){return state.items.filter(i=>i.incluir).length}
  function render(){
-  dialog.innerHTML='<button id="rf-close">‹ Voltar ao álbum</button><h1>Criar relatório fotográfico</h1><p>Fonte: '+escape(state.album.titulo)+'. As legendas abaixo pertencem apenas ao relatório.</p><label>Título<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label><label>Descrição<textarea id="rf-description" maxlength="500">'+escape(state.descricao)+'</textarea></label><div class="rf-toolbar"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label><button id="rf-all">Selecionar todas</button><button id="rf-none">Desmarcar todas</button><button id="rf-save">Salvar relatório</button><button id="rf-pdf">Exportar PDF</button><button id="rf-load">Abrir relatório salvo</button></div><p class="rf-message" role="status"></p><div class="rf-workspace"><div id="rf-items"></div><div class="rf-preview" aria-label="Prévia A4"></div></div>';
+  previewIndex=0;editFilter='all';editQuery='';editsVisible=30;
+  const total=state.items.length,shown=countIncluded();
+  const highlights=state.items.filter(i=>i.incluir&&i.destaque_no_relatorio).length;
+  const anomalies=state.items.filter(i=>i.incluir&&i.source.nivel_anomalia).length;
+  dialog.innerHTML='<div class="rf-editor-head"><button type="button" id="rf-close" class="rf-back">‹ Voltar ao álbum</button>'+
+   '<h1>Relatório fotográfico</h1>'+
+   '<p class="rf-source">'+escape(state.album.titulo)+' · <span id="rf-photo-count">'+shown+' de '+total+' fotos</span>'+
+   '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
+   '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+
+   '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button></div>'+
+   '<p class="rf-message" role="status" aria-live="polite"></p>'+
+   '<section class="rf-preview-area" aria-label="Prévia do relatório"><div class="rf-preview-top">'+
+   '<strong>Prévia A4</strong><div class="rf-page-tools"><button id="rf-page-prev" type="button" aria-label="Página anterior">‹</button>'+
+   '<span id="rf-preview-count"></span><button id="rf-page-next" type="button" aria-label="Próxima página">›</button></div></div>'+
+   '<div class="rf-preview" aria-label="Prévia da página selecionada"></div></section>'+
+   '<details class="rf-advanced" id="rf-advanced"><summary>Ajustes opcionais <span>Fotos e observações</span></summary>'+
+   '<div class="rf-advanced-inner"><p>O relatório já utiliza a ordem, a seleção e as observações do álbum. Edite aqui somente exceções.</p>'+
+   (!state.demo?'<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label>'+
+   '<div class="rf-advanced-save"><button id="rf-save" type="button">Salvar relatório</button><button id="rf-load" type="button">Abrir relatório salvo</button></div></div>':'')+
+   '<div class="rf-edit-tools"><label>Exibir <select id="rf-edit-filter"><option value="all">Todas as fotos</option><option value="highlight">Destaques</option>'+
+   '<option value="anomaly">Anomalias</option><option value="note">Com observação</option><option value="hidden">Ocultas</option></select></label>'+
+   '<label>Buscar foto <input id="rf-photo-search" type="search" placeholder="Número ou texto"></label></div>'+
+   '<div id="rf-items" class="rf-items"></div>'+
+   '<button id="rf-more" type="button" hidden>Mostrar mais fotos</button></div></details>';
   dialog.querySelector('#rf-close').onclick=close;
-  for(const [id,key] of [['rf-title','titulo'],['rf-description','descricao']])dialog.querySelector('#'+id).oninput=e=>{state[key]=e.target.value;dirty=true;preview()};
-  dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);dirty=true;preview()};
-  dialog.querySelector('#rf-all').onclick=()=>selectAll(true);dialog.querySelector('#rf-none').onclick=()=>selectAll(false);
-  dialog.querySelector('#rf-save').onclick=save;dialog.querySelector('#rf-pdf').onclick=exportPDF;dialog.querySelector('#rf-load').onclick=load;
-  rows();preview();
+  dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
+  dialog.querySelector('#rf-pdf').onclick=exportPDF;
+  dialog.querySelector('#rf-page-prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);preview()};
+  dialog.querySelector('#rf-page-next').onclick=()=>{previewIndex=Math.min(totalPages()-1,previewIndex+1);preview()};
+  dialog.querySelector('#rf-advanced').addEventListener('toggle',e=>{if(e.target.open)rows()});
+  dialog.querySelector('#rf-edit-filter').onchange=e=>{editFilter=e.target.value;editsVisible=30;rows()};
+  dialog.querySelector('#rf-photo-search').oninput=e=>{editQuery=e.target.value.trim().toLowerCase();editsVisible=30;rows()};
+  dialog.querySelector('#rf-more').onclick=()=>{editsVisible+=30;rows()};
+  if(!state.demo){
+   dialog.querySelector('#rf-title').oninput=e=>{state.titulo=e.target.value;dirty=true};
+   dialog.querySelector('#rf-save').onclick=save;
+   dialog.querySelector('#rf-load').onclick=load;
+  }
+  preview();
  }
- function selectAll(value){state.items.forEach(i=>i.incluir=value);dirty=true;rows();preview()}
+ function updateCounts(){
+  const el=dialog.querySelector('#rf-photo-count');
+  if(el)el.textContent=countIncluded()+' de '+state.items.length+' fotos';
+  const marks=dialog.querySelector('#rf-mark-count');
+  if(marks)marks.textContent=
+   state.items.filter(i=>i.incluir&&i.destaque_no_relatorio).length+' destaques · '+
+   state.items.filter(i=>i.incluir&&i.source.nivel_anomalia).length+' anomalias';
+ }
+ function filteredItems(){
+  return state.items.map((item,index)=>({item,index})).filter(({item})=>{
+   if(editFilter==='highlight'&&!item.destaque_no_relatorio)return false;
+   if(editFilter==='anomaly'&&!item.source.nivel_anomalia)return false;
+   if(editFilter==='note'&&!item.legenda?.trim())return false;
+   if(editFilter==='hidden'&&item.incluir)return false;
+   return !editQuery||String(item.numero).includes(editQuery)||(item.legenda||'').toLowerCase().includes(editQuery);
+  });
+ }
  function rows(){
-  dialog.querySelector('#rf-items').innerHTML=state.items.map((i,index)=>'<article class="rf-row" data-index="'+index+'"><img src="'+escape(i.url)+'" alt="Foto '+escape(i.numero)+'"><div><label><input type="checkbox" data-field="incluir" '+(i.incluir?'checked':'')+'> Foto '+escape(i.numero)+'</label><div>'+escape([i.source.destaque?'Destaque':'',i.source.nivel_anomalia?'Anomalia '+i.source.nivel_anomalia:''].filter(Boolean).join(' · '))+'</div><label>Legenda do relatório<textarea maxlength="1000" data-field="legenda">'+escape(i.legenda)+'</textarea></label><div class="rf-toolbar"><button data-move="-1" aria-label="Mover foto para cima" '+(!index?'disabled':'')+'>↑</button><button data-move="1" aria-label="Mover foto para baixo" '+(index===state.items.length-1?'disabled':'')+'>↓</button></div></div></article>').join('');
-  dialog.querySelectorAll('.rf-row').forEach(row=>{
+  const target=dialog.querySelector('#rf-items');
+  if(!target||!dialog.querySelector('#rf-advanced')?.open)return;
+  const filtered=filteredItems();
+  target.innerHTML=filtered.slice(0,editsVisible).map(({item:i,index})=>{
+   const info=[i.destaque_no_relatorio?'★ Destaque':'',i.source.nivel_anomalia?'⚠ Anomalia':'',i.legenda?.trim()?'Observação':''].filter(Boolean).join(' · ');
+   return '<article class="rf-row" data-index="'+index+'"><img src="'+escape(i.url)+'" loading="lazy" alt="">'+
+    '<div class="rf-row-body"><div class="rf-row-line"><label class="rf-inclusion"><input type="checkbox" data-field="incluir" '+(i.incluir?'checked':'')+'> Foto '+escape(String(i.numero).padStart(2,'0'))+'</label>'+
+    '<span class="rf-row-tags">'+escape(info)+'</span><button type="button" data-edit-toggle aria-expanded="false">Editar</button></div>'+
+    '<div class="rf-row-details" hidden><label>Observação desta foto<textarea maxlength="1000" data-field="legenda">'+escape(i.legenda)+'</textarea></label>'+
+    '<div class="rf-row-order"><button data-move="-1" type="button" '+(!index?'disabled':'')+' aria-label="Mover foto para cima">↑</button>'+
+    '<button data-move="1" type="button" '+(index===state.items.length-1?'disabled':'')+' aria-label="Mover foto para baixo">↓</button>'+
+    '<span>Ordem do relatório</span></div></div></div></article>'
+  }).join('')||'<p class="rf-empty-filter">Nenhuma foto encontrada.</p>';
+  const more=dialog.querySelector('#rf-more');
+  if(more){more.hidden=filtered.length<=editsVisible;more.textContent='Mostrar mais fotos ('+Math.max(0,filtered.length-editsVisible)+' restantes)'}
+  target.querySelectorAll('.rf-row').forEach(row=>{
    const index=Number(row.dataset.index);
-   row.querySelectorAll('[data-field]').forEach(el=>el.addEventListener(el.tagName==='TEXTAREA'?'input':'change',()=>{const key=el.dataset.field;state.items[index][key]=key==='incluir'?el.checked:el.value;dirty=true;preview()}));
-   row.querySelectorAll('[data-move]').forEach(el=>el.onclick=()=>{const next=index+Number(el.dataset.move);[state.items[index],state.items[next]]=[state.items[next],state.items[index]];dirty=true;rows();preview()});
+   row.querySelector('[data-edit-toggle]').onclick=e=>{
+    const details=row.querySelector('.rf-row-details');
+    details.hidden=!details.hidden;
+    e.currentTarget.setAttribute('aria-expanded',String(!details.hidden));
+    e.currentTarget.textContent=details.hidden?'Editar':'Fechar';
+   };
+   row.querySelector('[data-field="incluir"]').onchange=e=>{
+    state.items[index].incluir=e.target.checked;
+    dirty=true;preview();
+    if(editFilter==='hidden')rows();
+   };
+   row.querySelector('[data-field="legenda"]').onchange=e=>{
+    state.items[index].legenda=e.target.value;
+    dirty=true;preview();
+   };
+   row.querySelectorAll('[data-move]').forEach(button=>button.onclick=()=>{
+    const next=index+Number(button.dataset.move);
+    if(next<0||next>=state.items.length)return;
+    [state.items[index],state.items[next]]=[state.items[next],state.items[index]];
+    dirty=true;rows();preview();
+   });
   });
  }
  function sheets(){
