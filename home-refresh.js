@@ -88,13 +88,13 @@ function setup(){
  const search=document.querySelector('.search');
  if(search&&!document.getElementById('pl-mascot-stage')){
   const stage=document.createElement('figure');stage.id='pl-mascot-stage';stage.className='pl-mascot-stage';
-  stage.setAttribute('aria-label','Mascote Prédio Legal trabalhando');search.after(stage);
+  stage.setAttribute('aria-label','Mascote Prédio Legal trabalhando');search.before(stage);
  }
  applyQuote();
 }
 
 const sceneFiles=["1000378919","1000378923","1000378924","1000378927","1000378930","1000378937","1000378940","1000378941","1000378947","1000378948","1000378949","1000378954","1000378955","1000378956","1000378957","1000378958","1000378959","1000378960","1000378961","1000378962","1000378963","1000378964"];
-const SCENE_PERIOD=30000; // período de teste; depois ajustar para THREE_HOURS
+const SCENE_PERIOD=THREE_HOURS;
 let currentSceneSlot=-1;
 function fallbackScene(stage,nowSlot){
  // Reuse photos already displayed by the app until mascot assets are deployed.
