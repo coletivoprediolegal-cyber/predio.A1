@@ -73,3 +73,29 @@
 .cw-album-actions select{flex:1;min-width:140px;width:auto}
 @media(max-width:400px){.cw-towers{grid-template-columns:repeat(2,minmax(0,1fr))}.cw-towers button{min-height:75px}.cw-choices button{min-height:175px}.cw-choice-icon{width:32px;height:32px;font-size:20px}}
 @media(min-width:700px){.cw-app{max-width:760px}.cw-unit-grid{grid-template-columns:repeat(8,minmax(0,1fr))}}
+
+
+@media (prefers-color-scheme:dark){
+ .cw-app{color:#f5f2ec}
+ .cw-jobhead h1,.cw-crumb>span:last-child,.cw-mini,.cw-mini-main strong,.cw-detail h2,.cw-detail h3,.cw-subheading h2{color:#f5f2ec}
+ .cw-jobhead p,.cw-info,.cw-hint,.cw-mini-main small,.cw-crumb,.cw-subheading p,.cw-subheading span,.cw-detail-meta,.cw-empty,.cw-form label,.cw-detail label{color:#c9c5be}
+ .cw-choices button,.cw-towers button,.cw-unit-grid button,.cw-form{background:#1b2d42;color:#f5f2ec;border-color:rgba(207,219,232,.16)}
+ .cw-choices button strong,.cw-towers strong,.cw-unit-grid strong{color:#f5f2ec}
+ .cw-choices button small,.cw-towers button small,.cw-unit-grid button small{color:#c4bcb0}
+ .cw-choice-icon{background:#293c52;color:#d6a475}
+ .cw-tabs{background:#1a2d43}
+ .cw-tabs button{color:#c9c5be}
+ .cw-tabs button[aria-selected="true"]{background:#30455e;color:#fff}
+ .cw-section-label,.cw-mini-eyebrow,.cw-kicker{color:#d0aa81}
+ .cw-mini,.cw-mini-list,.cw-album-link{border-color:rgba(207,219,232,.16)}
+ .cw-topics button,.cw-filters button,.cw-add,.cw-form-actions button,.cw-save,.cw-album-actions button{border-color:#5a6c80;color:#e3c39f}
+ .cw-topics button.selected,.cw-filters button.selected{background:#d0a170;color:#152842;border-color:#d0a170}
+ .cw-quick-search,.cw-form input,.cw-form select,.cw-form textarea,.cw-detail textarea,.cw-detail select,.cw-album-actions select{background:#24384e;color:#f6f2eb;border-color:#536277}
+ .cw-form-actions button[type="submit"],.cw-save{background:#334a66;color:#fff;border-color:#51647b}
+ .cw-status{background:#22384b;color:#ddd7ce;border-color:#556578}
+ .cw-em_andamento{color:#a5ded8;border-color:#477b7a}
+ .cw-concluido{color:#c9dfb3;border-color:#70835b}
+ .cw-suspenso{color:#e8ba91;border-color:#946f58}
+ .cw-album-link button{color:#ebdfd0}
+ .cw-album-link button:last-child{color:#d0a170}
+}
