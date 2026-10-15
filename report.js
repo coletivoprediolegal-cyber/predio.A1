@@ -81,6 +81,8 @@
      fotos_por_pagina_override:null
     });
    }
+   const visibleTotal=state.items.filter(i=>i.incluir).length;
+   state.layout=visibleTotal<=2?2:visibleTotal<=4?4:visibleTotal<=6?6:visibleTotal<=9?9:12;
    dirty=false;render();
    if(demo)error({message:'Prévia demonstrativa: imagens ilustrativas. A ordem e os destaques acompanham o álbum.'});
   }catch(e){
