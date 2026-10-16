@@ -29,16 +29,10 @@ header .profile.pl-profile-seal{
   font:600 12px/1 'Libre Baskerville',Georgia,serif;letter-spacing:-.07em;
 }
 .pl-profile-seal span{transform:translateY(.5px)}
-@media(prefers-color-scheme:dark){
- .pl-home-quote{color:#f3eee6!important}
- .pl-home-eyebrow{color:#ceae87}
- .pl-home-quote-refresh{color:#c7a584}
- .pl-home-work-description{color:#b5b0a8}
- header .profile.pl-profile-seal{
+html.pl-night .pl-home-quote{color:#f3eee6!important}html.pl-night .pl-home-eyebrow{color:#ceae87}html.pl-night .pl-home-quote-refresh{color:#c7a584}html.pl-night .pl-home-work-description{color:#b5b0a8}html.pl-night header .profile.pl-profile-seal{
   background:rgba(214,203,187,.06);color:#e6d9c5;border-color:#b69a77;
   box-shadow:inset 0 0 0 3px #081a34,inset 0 0 0 4px rgba(225,198,159,.58);
  }
-}
 
 /* Tipografia original do aplicativo na abertura: sem serifa e sem itálico. */
 .pl-home-quote{font-family:'Instrument Sans',Arial,sans-serif!important;font-size:clamp(18px,3.5vw,23px)!important;font-weight:600!important;font-style:normal!important;line-height:1.4!important;max-width:460px!important;letter-spacing:0!important}
@@ -62,17 +56,13 @@ header .profile.pl-profile-seal{
 @media(min-width:700px){
  .pl-mascot-stage{height:380px;margin-block:16px 25px}
 }
-@media(prefers-color-scheme:dark){
- .pl-mascot-stage{background:transparent}
-}
+html.pl-night .pl-mascot-stage{background:transparent}
 
 /* Imagem editorial sempre visível, mantendo a tipografia original sem itálico. */
 .pl-mascot-stage{display:flex;min-height:260px;border-radius:12px;background:rgba(110,125,142,.06)}
 .pl-mascot-stage img{width:100%;height:100%;object-fit:cover;object-position:center}
 .pl-home-quote,.pl-home-quote *{font-family:'Instrument Sans',Arial,sans-serif!important;font-style:normal!important}
-@media(prefers-color-scheme:dark){.pl-mascot-stage{background:rgba(255,255,255,.035)}}
-
-/* Mascote como protagonista da página inicial: imagem integral, sem recortes. */
+html.pl-night .pl-mascot-stage{background:rgba(255,255,255,.035)}}html.pl-night /* Mascote como protagonista da página inicial: imagem integral,html.pl-night sem recortes. */
 .pl-mascot-stage{
   display:flex!important;
   width:100%;
@@ -84,7 +74,6 @@ header .profile.pl-profile-seal{
   overflow:visible;
   align-items:center;
   justify-content:center;
-}
 .pl-mascot-stage img{
   display:block;
   width:100%;
