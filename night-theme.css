@@ -1,7 +1,8 @@
-/* Modo noturno Prédio Legal — paleta azul profundo e tipografia neutra.
-   Mantém o modo claro e o papel/PDF institucional inalterados. */
-@media (prefers-color-scheme: dark) {
-  :root{
+/* Tema noturno Prédio Legal — azul original, aplicado quando o sistema informa modo escuro
+   ou quando o usuário escolhe Azul noturno em Mais > Aparência.
+   Modo claro e papel institucional de relatórios preservados. */
+:root:not(.pl-night){color-scheme:only light}
+html.pl-night{
     color-scheme:dark;
     --navy:#f6f3ee;
     --copper:#cf9a64;
@@ -14,100 +15,38 @@
     --pl-night-main:#f5f2ec;
     --pl-night-secondary:#c9c5be;
     --pl-night-muted:#aaa9a6;
-  }
-  html{background:var(--pl-night-bg);color-scheme:dark}
-  body{background:linear-gradient(180deg,#061329 0%,#081a34 52%,#07172e 100%);color:var(--pl-night-main);min-height:100dvh}
-  body::before{opacity:.18;mix-blend-mode:screen;z-index:0}
-  body > header,body > .container,body > nav{position:relative}
-  header{background:transparent}
-  .pl-logo-picture{display:block;width:169px;line-height:0}
-  .pl-logo-picture .logo{width:100%;height:auto}
-  .intro p,.section h2,.pl-top h1,.pl-jobhead h1,.job .name,.album b,.pl-card h3{color:var(--pl-night-main)}
-  .architecture{color:#8898a5;opacity:.21}
-  .architecture svg{stroke:#8e9dad}
-  .search,.pl-search{
+  }html.pl-night{background:var(--pl-night-bg);color-scheme:dark}html.pl-night body{background:linear-gradient(180deg,#061329 0%,#081a34 52%,#07172e 100%);color:var(--pl-night-main);min-height:100dvh}html.pl-night body::before{opacity:.18;mix-blend-mode:screen;z-index:0}html.pl-night body > header,html.pl-night body > .container,html.pl-night body > nav{position:relative}html.pl-night header{background:transparent}html.pl-night .pl-logo-picture{display:block;width:169px;line-height:0}html.pl-night .pl-logo-picture .logo{width:100%;height:auto}html.pl-night .intro p,html.pl-night .section h2,html.pl-night .pl-top h1,html.pl-night .pl-jobhead h1,html.pl-night .job .name,html.pl-night .album b,html.pl-night .pl-card h3{color:var(--pl-night-main)}html.pl-night .architecture{color:#8898a5;opacity:.21}html.pl-night .architecture svg{stroke:#8e9dad}html.pl-night .search,html.pl-night .pl-search{
     color:var(--pl-night-main)!important;
     background:rgba(32,50,72,.86)!important;
     border:1px solid var(--pl-night-border)!important;
     box-shadow:0 5px 18px rgba(0,6,19,.13)!important;
-  }
-  .search svg{color:#b9b7b3}
-  .search input,.pl-search input,.pl-search{color:var(--pl-night-main)!important}
-  .search input::placeholder,.pl-search::placeholder{color:#b8b5b0;opacity:1}
-  .job,.pl-card,.pl-professional-job-link{
+  }html.pl-night .search svg{color:#b9b7b3}html.pl-night .search input,html.pl-night .pl-search input,html.pl-night .pl-search{color:var(--pl-night-main)!important}html.pl-night .search input::placeholder,html.pl-night .pl-search::placeholder{color:#b8b5b0;opacity:1}html.pl-night .job,html.pl-night .pl-card,html.pl-night .pl-professional-job-link{
     background:rgba(29,46,67,.89)!important;
     color:var(--pl-night-main)!important;
     border:1px solid var(--pl-night-border)!important;
     box-shadow:0 3px 12px rgba(0,8,21,.12)!important;
-  }
-  .job .client,.job .meta,.album small,.pl-sub,.pl-meta,.pl-card p,.pl-album-subject,.pl-album-info .pl-meta,.pl-line span,.pl-empty,.pl-photo-note{color:var(--pl-night-secondary)!important}
-  .job .name,.pl-card h3,#pl-job .pl-line strong,#pl-job .pl-album-info strong{color:var(--pl-night-main)!important}
-  .section-title .view,.view,.pl-back,.pl-chevron,.chev,.pl-tag,.pl-type,.pl-amount{color:var(--copper)!important}
-  .pl-screen .pl-block h2,#pl-clients .pl-top h1,#pl-detail .pl-block h2,#pl-job .pl-fold summary{color:#ddd7cf!important}
-  .pl-line,.pl-compact,.pl-fold,.pl-album-row,.pl-invoice-parcel{border-color:var(--pl-night-border)!important}
-  .pl-card,.pl-album-row{color:var(--pl-night-main)}
-  .pl-chip{background:#27374b;color:#dbac76}
-  .pl-photo-card{background:#1b2b40;border-color:var(--pl-night-border)}
-  .pl-photo-preview{background:#26364c}
-  .pl-photo-num,.pl-photo-has-note{background:rgba(9,20,37,.88);color:#f5f2ec}
-  .pl-photo-actions button{color:#bdbab3}
-  .pl-photo-actions button.marked,.pl-photo-actions button[data-act="ocultar"].marked{color:#e1b477!important}
-  .pl-photo-actions button[data-act="anomalia"]:not(.anomaly-amarela):not(.anomaly-vermelha){color:#bab5ad}
-  .pl-photo-actions button.anomaly-amarela{color:#e0af45!important}
-  .pl-photo-actions button.anomaly-vermelha{color:#eb786b!important}
-  .pl-filter-bar button,.pl-sections button,.pl-bulk button,.pl-bulk select,
-  #pl-section-controls button,.pl-section-tabs button{
+  }html.pl-night .job .client,html.pl-night .job .meta,html.pl-night .album small,html.pl-night .pl-sub,html.pl-night .pl-meta,html.pl-night .pl-card p,html.pl-night .pl-album-subject,html.pl-night .pl-album-info .pl-meta,html.pl-night .pl-line span,html.pl-night .pl-empty,html.pl-night .pl-photo-note{color:var(--pl-night-secondary)!important}html.pl-night .job .name,html.pl-night .pl-card h3,html.pl-night #pl-job .pl-line strong,html.pl-night #pl-job .pl-album-info strong{color:var(--pl-night-main)!important}html.pl-night .section-title .view,html.pl-night .view,html.pl-night .pl-back,html.pl-night .pl-chevron,html.pl-night .chev,html.pl-night .pl-tag,html.pl-night .pl-type,html.pl-night .pl-amount{color:var(--copper)!important}html.pl-night .pl-screen .pl-block h2,html.pl-night #pl-clients .pl-top h1,html.pl-night #pl-detail .pl-block h2,html.pl-night #pl-job .pl-fold summary{color:#ddd7cf!important}html.pl-night .pl-line,html.pl-night .pl-compact,html.pl-night .pl-fold,html.pl-night .pl-album-row,html.pl-night .pl-invoice-parcel{border-color:var(--pl-night-border)!important}html.pl-night .pl-card,html.pl-night .pl-album-row{color:var(--pl-night-main)}html.pl-night .pl-chip{background:#27374b;color:#dbac76}html.pl-night .pl-photo-card{background:#1b2b40;border-color:var(--pl-night-border)}html.pl-night .pl-photo-preview{background:#26364c}html.pl-night .pl-photo-num,html.pl-night .pl-photo-has-note{background:rgba(9,20,37,.88);color:#f5f2ec}html.pl-night .pl-photo-actions button{color:#bdbab3}html.pl-night .pl-photo-actions button.marked,html.pl-night .pl-photo-actions button[data-act="ocultar"].marked{color:#e1b477!important}html.pl-night .pl-photo-actions button[data-act="anomalia"]:not(.anomaly-amarela):not(.anomaly-vermelha){color:#bab5ad}html.pl-night .pl-photo-actions button.anomaly-amarela{color:#e0af45!important}html.pl-night .pl-photo-actions button.anomaly-vermelha{color:#eb786b!important}html.pl-night .pl-filter-bar button,html.pl-night .pl-sections button,html.pl-night .pl-bulk button,html.pl-night .pl-bulk select,html.pl-night #pl-section-controls button,html.pl-night .pl-section-tabs button{
     color:#d6d1c9!important;
     background:rgba(35,53,73,.30)!important;
     border-color:rgba(190,203,216,.21)!important;
-  }
-  .pl-filter-bar button.selected{
+  }html.pl-night .pl-filter-bar button.selected{
     background:rgba(239,240,241,.13)!important;
     border-color:#d6d1c9!important;
     color:#fffaf5!important;
-  }
-  #pl-section-controls button.current,.pl-sections button.current{
+  }html.pl-night #pl-section-controls button.current,html.pl-night .pl-sections button.current{
     border-color:#ede9e2!important;
     background:rgba(244,239,231,.10)!important;
     color:#fffaf5!important;
-  }
-  .pl-show-deleted,.pl-section-controls .pl-meta{color:var(--pl-night-secondary)}
-  .pl-auth-card,.pl-invoice,.pl-block .pl-card{background:#1c2c40;border-color:var(--pl-night-border)}
-  .pl-invoice .pl-amount{color:#ddb07d}
-  .pl-copy-invoice,.pl-new-album{
+  }html.pl-night .pl-show-deleted,html.pl-night .pl-section-controls .pl-meta{color:var(--pl-night-secondary)}html.pl-night .pl-auth-card,html.pl-night .pl-invoice,html.pl-night .pl-block .pl-card{background:#1c2c40;border-color:var(--pl-night-border)}html.pl-night .pl-invoice .pl-amount{color:#ddb07d}html.pl-night .pl-copy-invoice,html.pl-night .pl-new-album{
     background:#263a54;border:1px solid rgba(220,228,233,.18);color:#f5f1eb
-  }
-  .pl-photo-card.pl-selected{outline-color:#ceb08c}
-  .pl-photo-card.pl-selected .pl-photo-preview:after{background:#d09d68;color:#0c1b31}
-  .pl-drag-ghost{box-shadow:0 15px 32px rgba(0,0,0,.4)}
-  body > nav{position:fixed!important;left:0;right:0;bottom:0;z-index:500!important;background:#0c1d33!important;border-top:1px solid var(--pl-night-border)!important;padding-bottom:calc(7px + env(safe-area-inset-bottom,0px))!important}
-  body > nav button{color:#c2beb8!important}
-  body > nav button.active{color:#d5a06a!important}
-  .notice{background:#26384e;color:#f8f4ee}
-  /* Componentes sobrepostos: manter contraste de campos e botões. */
-  #pl-import-overlay .pl-import-panel{background:#14263d;color:#f3efe8;border-color:#3b4a60}
-  #pl-import-overlay .pl-import-content h2{color:#faf6ee}
-  #pl-import-overlay .pl-import-description,#pl-import-overlay .pl-import-current,
-  #pl-import-overlay .pl-import-job-label{color:#cac4bc}
-  #pl-import-overlay input,#pl-import-overlay select{background:#24374e;color:#f7f2ea;border-color:#526077}
-  #pl-import-overlay .pl-import-primary{background:#e1b17d;color:#15233b;border-color:#e1b17d}
-  #pl-import-overlay .pl-import-secondary{color:#ded4c7;border-color:#718094}
-  #pl-login-gate{background:#07172e;color:#f3efe8}
-  .pl-gate-panel{background:rgba(29,46,67,.88);border-color:var(--pl-night-border)}
-  .pl-gate-brand,.pl-gate-panel h1{color:#f5f1eb}
-  .pl-gate-panel p{color:#cec8c0}
-  .pl-gate-panel button{background:#30445e;color:#fffaf4}
-  .pl-gate-note{color:#aba9a5}
-  /* O papel institucional do relatório continua branco, inclusive na prévia. */
-  .rf-dialog{background:#07192f;color:#f3efe9}
-  .rf-editor-head h1,.rf-preview-top,.rf-inclusion{color:#f5f1eb}
-  .rf-source,.rf-editor-tools label,.rf-advanced>summary,.rf-advanced-inner>p{color:#cac6c0}
-  .rf-editor-tools select,.rf-edit-tools select,.rf-edit-tools input{background:#263a53;color:#f5f1eb;border-color:#51647d}
-  .rf-preview{background:#1d2f45}
-  .rf-sheet{color:#26354b;color-scheme:light}
-  .rf-advanced,.rf-preview-area,.rf-row{border-color:var(--pl-night-border)}
-  .rf-row .rf-row-line [data-edit-toggle],.rf-row-actions .rf-edit-link{color:#dfd8cd}
-}
+  }html.pl-night .pl-photo-card.pl-selected{outline-color:#ceb08c}html.pl-night .pl-photo-card.pl-selected .pl-photo-preview:after{background:#d09d68;color:#0c1b31}html.pl-night .pl-drag-ghost{box-shadow:0 15px 32px rgba(0,0,0,.4)}html.pl-night body > nav{position:fixed!important;left:0;right:0;bottom:0;z-index:500!important;background:#0c1d33!important;border-top:1px solid var(--pl-night-border)!important;padding-bottom:calc(7px + env(safe-area-inset-bottom,0px))!important}html.pl-night body > nav button{color:#c2beb8!important}html.pl-night body > nav button.active{color:#d5a06a!important}html.pl-night .notice{background:#26384e;color:#f8f4ee}html.pl-night /* Componentes sobrepostos: manter contraste de campos e botões. */
+  #pl-import-overlay .pl-import-panel{background:#14263d;color:#f3efe8;border-color:#3b4a60}html.pl-night #pl-import-overlay .pl-import-content h2{color:#faf6ee}html.pl-night #pl-import-overlay .pl-import-description,html.pl-night #pl-import-overlay .pl-import-current,html.pl-night #pl-import-overlay .pl-import-job-label{color:#cac4bc}html.pl-night #pl-import-overlay input,html.pl-night #pl-import-overlay select{background:#24374e;color:#f7f2ea;border-color:#526077}html.pl-night #pl-import-overlay .pl-import-primary{background:#e1b17d;color:#15233b;border-color:#e1b17d}html.pl-night #pl-import-overlay .pl-import-secondary{color:#ded4c7;border-color:#718094}html.pl-night #pl-login-gate{background:#07172e;color:#f3efe8}html.pl-night .pl-gate-panel{background:rgba(29,46,67,.88);border-color:var(--pl-night-border)}html.pl-night .pl-gate-brand,html.pl-night .pl-gate-panel h1{color:#f5f1eb}html.pl-night .pl-gate-panel p{color:#cec8c0}html.pl-night .pl-gate-panel button{background:#30445e;color:#fffaf4}html.pl-night .pl-gate-note{color:#aba9a5}html.pl-night /* O papel institucional do relatório continua branco,html.pl-night inclusive na prévia. */
+  .rf-dialog{background:#07192f;color:#f3efe9}html.pl-night .rf-editor-head h1,html.pl-night .rf-preview-top,html.pl-night .rf-inclusion{color:#f5f1eb}html.pl-night .rf-source,html.pl-night .rf-editor-tools label,html.pl-night .rf-advanced>summary,html.pl-night .rf-advanced-inner>p{color:#cac6c0}html.pl-night .rf-editor-tools select,html.pl-night .rf-edit-tools select,html.pl-night .rf-edit-tools input{background:#263a53;color:#f5f1eb;border-color:#51647d}html.pl-night .rf-preview{background:#1d2f45}html.pl-night .rf-sheet{color:#26354b;color-scheme:light}html.pl-night .rf-advanced,html.pl-night .rf-preview-area,html.pl-night .rf-row{border-color:var(--pl-night-border)}html.pl-night .rf-row .rf-row-line [data-edit-toggle],html.pl-night .rf-row-actions .rf-edit-link{color:#dfd8cd}
 
 /* Mobile viewport: navigation never scrolls out of view. */
-html{min-height:100%;background:#06152c}body{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}body > .container{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+html{min-height:100%;background:#f5f0e7}html.pl-night{background:#06152c}body{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}body > .container{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+
+
+/* Seletor de aparência — exibido apenas em Mais. */
+#pl-theme-mode{display:block;max-width:270px;width:100%;min-height:42px;margin-top:7px;padding:8px 12px;border:1px solid #d9cfc1;border-radius:9px;background:#fffaf3;color:#102044;font:13px 'Instrument Sans',Arial,sans-serif}
+html.pl-night #pl-theme-mode{background:#1b2d42;color:#f5f2ec;border-color:rgba(207,219,232,.25)}
