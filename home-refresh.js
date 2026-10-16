@@ -63,21 +63,6 @@ function applyQuote(){
 }
 function cycle(){override++;applyQuote()}
 function setup(){
- const intro=document.querySelector('.intro');
- if(intro&&!intro.classList.contains('pl-home-intro')){
-  intro.classList.add('pl-home-intro');
-  const label=document.createElement('div');label.className='pl-home-quote-wrap';
-  const brow=document.createElement('div');brow.className='pl-home-eyebrow';brow.textContent='';brow.hidden=true;
-  const quote=document.getElementById('hero-text');
-  quote.classList.add('pl-home-quote');
-  const button=document.createElement('button');
-  button.type='button';button.className='pl-home-quote-refresh';
-  button.setAttribute('aria-label','Mostrar outra frase');
-  button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14-5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14 5l2-2"/><path d="M20 21v-5h-5"/></svg> Outra frase';
-  button.addEventListener('click',cycle);
-  label.append(brow,quote,button);
-  intro.prepend(label);
- }
  const profile=document.querySelector('header .profile');
  if(profile&&!profile.classList.contains('pl-profile-seal')){
   profile.classList.add('pl-profile-seal');
@@ -85,12 +70,11 @@ function setup(){
   profile.setAttribute('title','Minha conta');
   profile.innerHTML='<span aria-hidden="true">PL</span>';
  }
- const search=document.querySelector('.search');
+ const search=document.getElementById('pl-home-search');
  if(search&&!document.getElementById('pl-mascot-stage')){
   const stage=document.createElement('figure');stage.id='pl-mascot-stage';stage.className='pl-mascot-stage';
   stage.setAttribute('aria-label','Mascote Prédio Legal trabalhando');search.after(stage);
  }
- applyQuote();
 }
 
 const sceneFiles=["1000378919","1000378923","1000378924","1000378927","1000378930","1000378937","1000378940","1000378941","1000378947","1000378948","1000378949","1000378954","1000378955","1000378956","1000378957","1000378958","1000378959","1000378960","1000378961","1000378962","1000378963","1000378964"];
