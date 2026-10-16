@@ -171,7 +171,7 @@ function clientCategory(client){
 function renderList(){
 const q=($('#pl-client-search').value||'').toLocaleLowerCase('pt-BR').trim();
 const items=directory.filter(c=>(c.nome+' '+c.tipo).toLocaleLowerCase('pt-BR').includes(q));
-$('#pl-client-list').innerHTML=items.length?items.map(c=>{const category=clientCategory(c);return '<button class="pl-card pl-compact pl-row pl-client-category-row" data-pl-client="'+esc(c.id)+'"><img class="pl-client-category-icon" src="assets/client-categories/'+CLIENT_CATEGORY_ICON[category]+'" loading="lazy" alt="" onerror="this.style.visibility=\'hidden\'"><div class="pl-client-category-body"><h3>'+esc(c.nome)+'</h3><p>'+esc(CLIENT_CATEGORY_LABELS[category])+' · '+esc(enterpriseGroups(c).length)+' empreendimentos</p></div><span class="pl-chevron">›</span></button>'}).join(''):'<p class="pl-empty">Nenhum cliente encontrado.</p>';
+$('#pl-client-list').innerHTML=items.length?items.map(c=>{const category=clientCategory(c);return '<button class="pl-card pl-compact pl-row pl-client-category-row" data-pl-client="'+esc(c.id)+'"><img class="pl-client-category-icon" src="assets/client-categories/'+CLIENT_CATEGORY_ICON[category]+'" loading="lazy" alt="Categoria: '+esc(CLIENT_CATEGORY_LABELS[category])+'" onerror="this.style.visibility=\'hidden\'"><div class="pl-client-category-body"><h3>'+esc(c.nome)+'</h3><p>'+enterpriseGroups(c).length+' '+(enterpriseGroups(c).length===1?'empreendimento':'empreendimentos')+'</p></div><span class="pl-chevron">›</span></button>'}).join(''):'<p class="pl-empty">Nenhum cliente encontrado.</p>';
 $('#pl-client-list').querySelectorAll('[data-pl-client]').forEach(b=>b.addEventListener('click',()=>openClient(b.dataset.plClient)));
 }
 let activeClient=null,activeEnterprise=null;
