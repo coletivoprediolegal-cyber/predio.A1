@@ -88,7 +88,7 @@ function setup(){
  const search=document.querySelector('.search');
  if(search&&!document.getElementById('pl-mascot-stage')){
   const stage=document.createElement('figure');stage.id='pl-mascot-stage';stage.className='pl-mascot-stage';
-  stage.setAttribute('aria-label','Mascote Prédio Legal trabalhando');search.before(stage);
+  stage.setAttribute('aria-label','Mascote Prédio Legal trabalhando');search.after(stage);
  }
  applyQuote();
 }
