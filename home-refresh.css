@@ -62,29 +62,9 @@ html.pl-night .pl-mascot-stage{background:transparent}
 .pl-mascot-stage{display:flex;min-height:260px;border-radius:12px;background:rgba(110,125,142,.06)}
 .pl-mascot-stage img{width:100%;height:100%;object-fit:cover;object-position:center}
 .pl-home-quote,.pl-home-quote *{font-family:'Instrument Sans',Arial,sans-serif!important;font-style:normal!important}
-html.pl-night .pl-mascot-stage{background:rgba(255,255,255,.035)}}html.pl-night /* Mascote como protagonista da página inicial: imagem integral,html.pl-night sem recortes. */
-.pl-mascot-stage{
-  display:flex!important;
-  width:100%;
-  height:clamp(420px,125vw,680px);
-  min-height:420px;
-  margin:8px auto 24px;
-  padding:0;
-  background:transparent!important;
-  overflow:visible;
-  align-items:center;
-  justify-content:center;
-.pl-mascot-stage img{
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:contain!important;
-  object-position:center center;
-}
-@media(min-width:700px){
- .pl-mascot-stage{height:clamp(500px,70vh,720px);margin:12px auto 30px}
-}
-
+/* Imagem integral, sem moldura ou recorte. */
+.pl-mascot-stage{display:flex;align-items:center;justify-content:center;background:transparent!important;border:0;border-radius:0;overflow:visible}
+.pl-mascot-stage img{display:block;width:100%;height:auto;object-fit:contain!important;border:0;border-radius:0}
 /* Home-capa: frase, mascote e busca são toda a experiência acima da dobra. */
 body > .container:not(.pl-screen):has(.pl-home-intro){
   --pl-home-nav-space:92px;
@@ -142,4 +122,20 @@ body > .container:not(.pl-screen) > .section:first-of-type{
 @media(min-width:700px){
  body > .container:not(.pl-screen) > .pl-mascot-stage{height:clamp(480px,68dvh,780px)!important;flex:0 0 auto}
  body > .container:not(.pl-screen) > .search{margin-bottom:35px}
+}
+
+/* A busca antecede a imagem. A arte se estende horizontalmente e mantém a proporção original. */
+body > .container:not(.pl-screen) > .pl-mascot-stage{
+ display:block!important;width:100vw!important;height:auto!important;min-height:0!important;
+ max-width:none!important;position:relative;left:50%;transform:translateX(-50%);
+ margin:10px 0 26px!important;padding:0!important;flex:none!important;
+ overflow:visible!important;border:0!important;border-radius:0!important;background:transparent!important;
+}
+body > .container:not(.pl-screen) > .pl-mascot-stage img{
+ display:block;width:100%!important;height:auto!important;max-height:none!important;
+ object-fit:contain!important;border:0!important;border-radius:0!important;
+}
+body > .container:not(.pl-screen) > .search{margin:14px 0 4px!important}
+@media(min-width:700px){
+ body > .container:not(.pl-screen) > .pl-mascot-stage{width:min(100vw,1100px)!important}
 }
