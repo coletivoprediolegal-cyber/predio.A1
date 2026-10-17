@@ -12,9 +12,9 @@ const escape=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 function normStatus(s){const v=String(s||'').toLowerCase();if(/conclu|finaliz|entreg/.test(v))return 'concluido';if(/inativ|cancel|arquiv/.test(v))return 'inativo';if(/espera|paus|suspens/.test(v))return 'espera';if(/andament|execu/.test(v))return 'andamento';return 'ativo'}
 const categoryOptions=[['todas','Todas as categorias'],['monitoramento','Monitoramento mensal'],['at','Assistência técnica judicial (AT)'],['inspecao','Inspeção / laudo'],['consultoria','Consultoria'],['pericia','Perícia judicial'],['avaliacao','Avaliação'],['reforma','Reformas / obras'],['outras','Outras / não classificadas']];
 function categoryOf(value){
- const v=String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+ const v=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  if(/monitoramento|assessoria mensal|acompanhamento predial mensal/.test(v))return 'monitoramento';
- if(/assistencia tecnica|assistente tecnico|\\bat\\b|quesitos|impugnacao pericial/.test(v))return 'at';
+ if(/assistencia tecnica|assistente tecnico|\bat\b|quesitos|impugnacao pericial/.test(v))return 'at';
  if(/pericia|peritagem judicial/.test(v))return 'pericia';
  if(/avaliacao|avaliar imoveis/.test(v))return 'avaliacao';
  if(/reforma|obra|plano de obras/.test(v))return 'reforma';
