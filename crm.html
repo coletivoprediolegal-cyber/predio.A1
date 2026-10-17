@@ -88,7 +88,8 @@
         edit(null);const f=el('form').elements;f.nome.value=name;f.email.value=email;f.telefone.value=phone;f.revisao_pendente.checked=true;el('editor-title').textContent='Revisar contato importado';return;
       }catch(err){if(err.name==='AbortError')return;console.warn('Seletor de contatos:',err);}
     }
-    alert('Este navegador não permite selecionar contatos diretamente. No Google Contatos, abra a pessoa, toque em Compartilhar e salve o arquivo VCF. Depois escolha esse arquivo em Meus Arquivos.');\n    el('vcf-file').click();
+    alert('Este navegador não permite selecionar contatos diretamente. No Google Contatos, abra a pessoa, toque em Compartilhar e salve o arquivo VCF. Depois escolha esse arquivo em Meus Arquivos.');
+    el('vcf-file').click();
   };
   el('vcf-file').addEventListener('change',async event=>{
     const file=event.target.files?.[0];event.target.value='';
