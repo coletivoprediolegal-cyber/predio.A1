@@ -438,7 +438,7 @@ if(b.dataset.action==='Mais'){switchTo('more');return}
 }));
 document.querySelector('header .profile')?.addEventListener('click',()=>{switchTo('access');refreshAuth()});
 window.addEventListener('popstate',()=>switchTo('home'));
-window.PLJobsOverview&&(window.PLJobsOverview.openJob=openProfessionalJob);
+document.addEventListener('DOMContentLoaded',()=>{if(window.PLJobsOverview){window.PLJobsOverview.openJob=openProfessionalJob;if(professionalJobs.length)window.PLJobsOverview.setJobs(professionalJobs);}});
 window.addEventListener('pl:authorized',load);
 })();
 </script><link rel="stylesheet" href="report.css?v=8"><script src="report-core.js?v=3"></script><script src="assets/jspdf.umd.min.js"></script><script src="report.js?v=14"></script><style>
