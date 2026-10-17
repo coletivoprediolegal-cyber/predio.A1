@@ -4,7 +4,7 @@
   const safe = value => String(value ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
   const isEmbedded = new URLSearchParams(location.search).has('embed');
   if (isEmbedded) { document.body.classList.add('embedded'); document.querySelector('header')?.remove(); }
-  let records = [], links = [], selected = null, statusFilter = 'ativos', category = 'todos';
+  let records = [], links = [], enterprises = [], jobs = [], selected = null, statusFilter = 'ativos', category = 'todos';
   const fields = ['nome','email','telefone','profissao','organizacao_texto','empreendimento_texto','observacoes','categoria_profissional'];
   const showError = message => { el('count').textContent = 'Falha ao carregar contatos'; el('status').textContent = message; el('list').innerHTML='<button class="btn" type="button" id="crm-retry">Tentar novamente</button>';el('crm-retry').onclick=()=>location.reload(); };
   if (!window.supabase?.createClient) { showError('Biblioteca Supabase indisponível. Verifique a conexão e recarregue.'); return; }
@@ -21,8 +21,8 @@
   function isComplete(r) {
     const related=links.filter(v=>v.contato_id===r.id);
     const hasRole=Boolean(r.profissao?.trim()||related.some(v=>v.funcao?.trim()));
-    const hasJob=Boolean(related.some(v=>v.job_id)||related.some(v=>v.caso_nome?.trim()));
-    const hasEnterprise=Boolean(r.empreendimento_texto?.trim()||related.some(v=>v.empreendimento_id)||related.some(v=>v.caso_nome?.trim()));
+    const hasJob=Boolean(related.some(v=>v.job_id));
+    const hasEnterprise=Boolean(related.some(v=>v.empreendimento_id));
     return Boolean(r.nome?.trim()&&r.email?.trim()&&hasRole&&hasJob&&hasEnterprise);
   }
   function render() {
@@ -37,15 +37,23 @@
     el('count').textContent = records.filter(r=>!r.arquivado_em).length+' contatos cadastrados';
     el('list').innerHTML = visible.map(r=>{
       const associated=links.filter(v=>v.contato_id===r.id);
-      const details=associated.length ? associated.map(v=>'<span>'+safe(v.funcao)+' · '+safe(v.caso_nome)+'</span>').join('') : '<span>'+safe([r.profissao,r.empreendimento_texto].filter(Boolean).join(' · ')||r.organizacao_texto||'Função e casos a identificar')+'</span>';
+      const details=associated.length ? associated.map(v=>'<span>'+safe(v.funcao)+' · '+safe(enterprises.find(e=>e.id===v.empreendimento_id)?.nome||v.caso_nome)+(v.job_id?' / '+safe(jobs.find(j=>j.id===v.job_id)?.titulo||'Job'):'')+'</span>').join('') : '<span>'+safe([r.profissao,r.empreendimento_texto].filter(Boolean).join(' · ')||r.organizacao_texto||'Função e casos a identificar')+'</span>';
       return '<button class="item" data-id="'+safe(r.id)+'"><div class="avatar">'+safe((r.nome||'?').charAt(0).toUpperCase())+'</div><div class="item-body"><b>'+safe(r.nome)+'</b>'+details+'</div><div class="arrow">›</div></button>';
     }).join('') || '<div class="empty">Nenhum contato nesta seleção.</div>';
   }
+  const roles=['Síndico','Subsíndico','Zelador','Conselheiro','Advogado','Engenheiro','Arquiteto','Administrador','Gestor','Fornecedor','Serralheiro','Marmoraria','Empreiteiro','Outro'];
+  const options=(items,chosen,placeholder)=>'<option value="">'+safe(placeholder)+'</option>'+items.map(o=>'<option value="'+safe(o.id)+'" '+(o.id===chosen?'selected':'')+'>'+safe(o.nome||o.titulo)+'</option>').join('');
+  function updateJobs(row,chosen='') {
+    const enterprise=row.querySelector('.ve').value;
+    const available=jobs.filter(j=>!enterprise||j.empreendimento_id===enterprise);
+    row.querySelector('.vj').innerHTML=options(available,chosen,'Job (opcional, inclusive inativos)');
+  }
   function addLink(v={}) {
     const row=document.createElement('div');row.className='vinculo';
-    row.innerHTML='<input class="vf" placeholder="Função" aria-label="Função"><input class="vc" placeholder="Empreendimento / caso" aria-label="Caso"><button class="btn" type="button">×</button>';
-    row.querySelector('.vf').value=v.funcao||'';
-    row.querySelector('.vc').value=v.caso_nome||'';
+    row.style.cssText='display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:14px';
+    row.innerHTML='<div style="display:grid;gap:8px;min-width:0"><select class="vf" aria-label="Função">'+roles.map(role=>'<option '+(role===v.funcao?'selected':'')+'>'+safe(role)+'</option>').join('')+'</select><select class="ve" aria-label="Empreendimento">'+options(enterprises,v.empreendimento_id,'Selecionar empreendimento')+'</select><select class="vj" aria-label="Job"></select><small>Vínculos selecionados são registros do banco, não textos livres.</small></div><button class="btn" type="button" aria-label="Remover vínculo">×</button>';
+    row.querySelector('.ve').onchange=()=>updateJobs(row);
+    updateJobs(row,v.job_id);
     row.querySelector('button').onclick=()=>row.remove();
     el('vinculos').append(row);
   }
@@ -65,7 +73,10 @@
     el('count').textContent='Carregando contatos…';
     const {data,error}=await db.from('contatos').select('*').order('nome').limit(1000);
     if(error){showError('Supabase: '+error.message);return;}
-    records=data||[];if(!records.length){el('status').textContent='A consulta retornou zero contatos. Verifique se a conta conectada tem permissão para ler o CRM.';}else{el('status').textContent='';}
+    records=data||[];
+    const [entResult,jobResult]=await Promise.all([db.from('empreendimentos').select('id,nome').order('nome'),db.from('jobs').select('id,titulo,empreendimento_id').order('titulo')]);
+    enterprises=entResult.data||[];jobs=jobResult.data||[];
+    if(entResult.error||jobResult.error)el('status').textContent='Não foi possível carregar todas as opções de empreendimentos/jobs.';if(!records.length){el('status').textContent='A consulta retornou zero contatos. Verifique se a conta conectada tem permissão para ler o CRM.';}else{el('status').textContent='';}
     const result=await db.from('contato_vinculos').select('*').limit(5000);
     links=result.data||[];
     if(result.error)el('status').textContent='Vínculos: '+result.error.message;
@@ -130,7 +141,7 @@
     const response=savedId ? await db.from('contatos').update(payload).eq('id',savedId).select('id').single() : await db.from('contatos').insert(payload).select('id').single();
     if(response.error){el('form-error').textContent=response.error.message;return;}
     savedId=response.data.id;
-    const entries=[...el('vinculos').querySelectorAll('.vinculo')].map(row=>({contato_id:savedId,funcao:row.querySelector('.vf').value.trim(),caso_nome:row.querySelector('.vc').value.trim()})).filter(v=>v.funcao&&v.caso_nome);
+    const entries=[...el('vinculos').querySelectorAll('.vinculo')].map(row=>{const eid=row.querySelector('.ve').value||null,jid=row.querySelector('.vj').value||null;return {contato_id:savedId,funcao:row.querySelector('.vf').value,empreendimento_id:eid,job_id:jid,caso_nome:jobs.find(j=>j.id===jid)?.titulo||enterprises.find(e=>e.id===eid)?.nome||''};}).filter(v=>v.funcao&&v.caso_nome);
     const removal=await db.from('contato_vinculos').delete().eq('contato_id',savedId);
     if(removal.error){el('form-error').textContent=removal.error.message;return;}
     if(entries.length){const insertion=await db.from('contato_vinculos').insert(entries);if(insertion.error){el('form-error').textContent=insertion.error.message;return;}}
