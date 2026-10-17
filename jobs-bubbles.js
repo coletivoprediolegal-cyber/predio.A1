@@ -6,12 +6,24 @@ const sample=[
 const labels={ativo:'Ativo',andamento:'Em andamento',espera:'Em espera',concluido:'Concluído',inativo:'Inativo'};
 const dots={ativo:'#62945e',andamento:'#e78020',espera:'#47729a',concluido:'#999',inativo:'#c18b8c'};
 const el=document.getElementById('pl-jobs-overview');if(!el)return;
-let filter='todos',mode='bolhas',items=sample,selected=null;
+let filter='todos',categoryFilter='todas',mode='bolhas',items=sample,selected=null;
 const money=n=>n==null?'Valor não informado':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(n);
 const escape=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function normStatus(s){const v=String(s||'').toLowerCase();if(/conclu|finaliz|entreg/.test(v))return 'concluido';if(/inativ|cancel|arquiv/.test(v))return 'inativo';if(/espera|paus|suspens/.test(v))return 'espera';if(/andament|execu/.test(v))return 'andamento';return 'ativo'}
+const categoryOptions=[['todas','Todas as categorias'],['monitoramento','Monitoramento mensal'],['at','Assistência técnica judicial (AT)'],['inspecao','Inspeção / laudo'],['consultoria','Consultoria'],['pericia','Perícia judicial'],['avaliacao','Avaliação'],['reforma','Reformas / obras'],['outras','Outras / não classificadas']];
+function categoryOf(value){
+ const v=String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+ if(/monitoramento|assessoria mensal|acompanhamento predial mensal/.test(v))return 'monitoramento';
+ if(/assistencia tecnica|assistente tecnico|\\bat\\b|quesitos|impugnacao pericial/.test(v))return 'at';
+ if(/pericia|peritagem judicial/.test(v))return 'pericia';
+ if(/avaliacao|avaliar imoveis/.test(v))return 'avaliacao';
+ if(/reforma|obra|plano de obras/.test(v))return 'reforma';
+ if(/inspecao|vistoria|laudo|patologia|diagnostico/.test(v))return 'inspecao';
+ if(/consultoria|assessoria|melhorias|garagem|orcamentacao/.test(v))return 'consultoria';
+ return 'outras';
+}
 const illustrativeValues=[85000,12000,48000,23000,65000,9000,35000,16000,55000,7000];
-function realJobs(rows){return rows.map((j,i)=>{const raw=j.valor_contrato??j.valor_total;const actual=raw!==null&&raw!==undefined&&raw!==''&&Number.isFinite(Number(raw))?Number(raw):null;return {id:j.id,title:j.titulo||j.nome||'Job',value:actual,displayValue:actual??illustrativeValues[i%illustrativeValues.length],status:normStatus(j.status||j.situacao),color:['#a7c1a4','#a9c4de','#dbc09a','#dbaaa4','#bcb0c4'][i%5],demo:false,client:j.cliente||'',enterprise:j.empreendimento||''}})}
+function realJobs(rows){return rows.map((j,i)=>{const raw=j.valor_contrato??j.valor_total;const actual=raw!==null&&raw!==undefined&&raw!==''&&Number.isFinite(Number(raw))?Number(raw):null;return {id:j.id,title:j.titulo||j.nome||'Job',value:actual,displayValue:actual??illustrativeValues[i%illustrativeValues.length],status:normStatus(j.status||j.situacao),color:['#a7c1a4','#a9c4de','#dbc09a','#dbaaa4','#bcb0c4'][i%5],demo:false,client:j.cliente||'',enterprise:j.empreendimento||'',category:categoryOf(j.categoria_nome||j.categoria||j.tipo_servico||j.tipo_job||j.tipo||j.titulo||j.nome)}})}
 function size(v){const maximum=Math.max(85000,...items.map(i=>i.displayValue??i.value??0));return Math.round(62+106*Math.sqrt(Math.max(0,v||0)/maximum))}
 function position(nodes,width){
  // Deterministic circle packing: place each bubble in the closest free pocket.
@@ -47,9 +59,10 @@ function position(nodes,width){
  return {nodes:placed,height};
 }
 function render(){
- const visible=items.filter(j=>filter==='todos'||j.status===filter);
- el.innerHTML='<div class="pl-bubble-head"><h1>Jobs</h1><button type="button" class="pl-bubble-mode" aria-label="Alternar grade e bolhas">'+(mode==='bolhas'?'☷':'◯')+'</button></div>'+(items===sample?'<p class="pl-bubble-demo">Visualização demonstrativa · valores ilustrativos, não são contratos reais</p>':'<p class="pl-bubble-demo">Jobs autorizados · tamanhos ilustrativos onde não há valor cadastrado</p>')+'<div class="pl-bubble-canvas" id="pl-bubble-canvas"></div>'+'<div class="pl-bubble-filters">'+[['todos','Todos'],['ativo','Ativos'],['andamento','Em andamento'],['espera','Em espera'],['concluido','Concluídos'],['inativo','Inativos']].map(([k,v])=>'<button data-filter="'+k+'" class="'+(filter===k?'selected':'')+'">'+v+'</button>').join('')+'</div>'+'<div class="pl-bubble-detail" id="pl-bubble-detail" hidden></div>';
+ const visible=items.filter(j=>(filter==='todos'||j.status===filter)&&(categoryFilter==='todas'||(j.category||categoryOf(j.title))===categoryFilter));
+ el.innerHTML='<div class="pl-bubble-head"><h1>Jobs</h1><button type="button" class="pl-bubble-mode" aria-label="Alternar grade e bolhas">'+(mode==='bolhas'?'☷':'◯')+'</button></div>'+(items===sample?'<p class="pl-bubble-demo">Visualização demonstrativa · valores ilustrativos, não são contratos reais</p>':'<p class="pl-bubble-demo">Jobs autorizados · tamanhos ilustrativos onde não há valor cadastrado</p>')+'<div class="pl-bubble-canvas" id="pl-bubble-canvas"></div>'+'<div class="pl-bubble-filters">'+[['todos','Todos'],['ativo','Ativos'],['andamento','Em andamento'],['espera','Em espera'],['concluido','Concluídos'],['inativo','Inativos']].map(([k,v])=>'<button data-filter="'+k+'" class="'+(filter===k?'selected':'')+'">'+v+'</button>').join('')+'</div>'+'<div class="pl-bubble-categories"><label for="pl-jobs-category">Categoria</label><select id="pl-jobs-category" aria-label="Filtrar jobs por categoria">'+categoryOptions.map(([key,label])=>'<option value="'+key+'"'+(categoryFilter===key?' selected':'')+'>'+label+'</option>').join('')+'</select></div>'+'<div class="pl-bubble-detail" id="pl-bubble-detail" hidden></div>';
  el.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;render()});
+ el.querySelector('#pl-jobs-category').onchange=e=>{categoryFilter=e.target.value;render()};
  el.querySelector('.pl-bubble-mode').onclick=()=>{mode=mode==='bolhas'?'grade':'bolhas';render()};
  const canvas=el.querySelector('#pl-bubble-canvas');
  if(!visible.length){canvas.innerHTML='<p class="pl-empty">Nenhum job nesta situação.</p>';return}
