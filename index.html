@@ -157,7 +157,7 @@ function switchTo(page){
 current=page;$('.container:not(.pl-screen)').style.display=page==='home'?'':'none';
 $('#pl-clients').classList.toggle('visible',page==='clients');$('#pl-jobs-overview').classList.toggle('visible',page==='jobs');if(page==='jobs')window.PLJobsOverview?.show();
 $('#pl-detail').classList.toggle('visible',page==='detail');$('#pl-enterprise').classList.toggle('visible',page==='enterprise');$('#pl-job').classList.toggle('visible',page==='job');$('#pl-album').classList.toggle('visible',page==='album');$('#pl-access').classList.toggle('visible',page==='access');$('#pl-more').classList.toggle('visible',page==='more');
-document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.action===(page==='home'?'Início':page==='more'?'Mais':'Clientes')));
+document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.action===(page==='home'?'Início':page==='more'?'Mais':page==='jobs'||page==='job'?'Jobs':page==='album'?'Álbuns':'Clientes')));
 window.scrollTo({top:0,behavior:'instant'});
 }
 const CLIENT_CATEGORY_LABELS={condominio:'Condomínio',construtora:'Construtora / Incorporadora',judicial:'Judicial',academico:'Acadêmico',parceiro:'Parceiro',empresa:'Empresa'};
