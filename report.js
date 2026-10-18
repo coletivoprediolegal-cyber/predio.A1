@@ -126,7 +126,7 @@
    const sectionByPhoto=new Map(sectionMemberships.map(x=>[String(x.fotografia_id),x.secao_id]));
    const sectionNames=new Map(sections.map(x=>[String(x.id),x.nome||x.nome_secao||x.titulo||'']));
    state={album,id:null,demo,empreendimento,titulo:'Relatório fotográfico',
-    descricao:'',layout:12,items:[]};
+    descricao:'',layout:12,startNumber:1,items:[]};
    for(const link of links){
     const f=link.fotografias;
     if(!f||f.excluida_em)continue;
@@ -156,6 +156,7 @@
  let previewIndex=0,editFilter='all',editQuery='',editsVisible=30;
  function totalPages(){return core.paginate(state.items,state.layout).length}
  function countIncluded(){return state.items.filter(i=>i.incluir).length}
+ function reportNumber(item){const numbers=state.items.map(i=>Number(i.numero)).filter(Number.isFinite);const first=numbers.length?Math.min(...numbers):1;return Math.max(1,Number(state.startNumber)||1)+Number(item.numero)-first}
  function render(){
   previewIndex=0;editFilter='all';editQuery='';editsVisible=30;
   const total=state.items.length,shown=countIncluded();
@@ -165,7 +166,7 @@
    '<h1>Relatório fotográfico</h1>'+
    '<p class="rf-source">'+escape(state.album.titulo)+' · <span id="rf-photo-count">'+shown+' de '+total+' fotos</span>'+
    '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
-   '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+
+   '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+ '<label>Iniciar fotos em <input id="rf-start-number" type="number" min="1" max="99999" step="1" inputmode="numeric" value="'+state.startNumber+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ 
    '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button></div>'+
    '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
@@ -186,6 +187,7 @@
    '<button id="rf-more" type="button" hidden>Mostrar mais fotos</button></div></details>';
   dialog.querySelector('#rf-close').onclick=close;
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
+  dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;preview();};
   dialog.querySelector('#rf-pdf').onclick=exportPDF;
   dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;preview()};
   dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;preview()};
@@ -452,8 +454,8 @@
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
-    return '<figure class="'+cls+'" data-photo-number="'+escape(i.numero)+'"><div class="rf-photo"><img crossorigin="anonymous" src="'+escape(i.url)+'" alt="Fotografia '+escape(i.numero)+'">'+
-     '<span class="rf-number">'+(featured?'★ ':'')+escape(String(i.numero).padStart(2,'0'))+'</span>'+
+    return '<figure class="'+cls+'" data-photo-number="'+escape(reportNumber(i))+'"><div class="rf-photo"><img crossorigin="anonymous" src="'+escape(i.url)+'" alt="Fotografia '+escape(reportNumber(i))+'">'+
+     '<span class="rf-number">'+(featured?'★ ':'')+escape(String(reportNumber(i)).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
      '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(escape).join(' · ')+'</figcaption>')+'</figure>';
@@ -552,7 +554,7 @@
   const originals=new Map(state.items.map(i=>[i.fotografia_id,i]));
   if(items.some(i=>!originals.has(i.fotografia_id)))throw new Error('Há fotografias removidas ou inacessíveis no álbum. Revise a fonte antes de abrir este relatório.');
   const included=new Set(items.map(i=>i.fotografia_id));
-  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,destaque_no_relatorio:!!originals.get(i.fotografia_id).source.destaque,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;dirty=false;render();
+  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,destaque_no_relatorio:!!originals.get(i.fotografia_id).source.destaque,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;state.startNumber=1;dirty=false;render();
  }catch(e){error(e)}finally{busy=false}}
  async function exportPDF(){
   if(busy)return;
