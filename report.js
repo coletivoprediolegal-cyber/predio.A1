@@ -566,11 +566,14 @@
    await document.fonts.ready;
    if(generation!==revision)return;
    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true});
+   // Android browsers can exhaust memory when hundreds of images are retained.
+   // Lower raster size on mobile; preserve the A4 layout and all photo numbers.
+   const mobilePDF=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
    const reportPages=core.paginate(state.items,state.layout);
    const initialPreviewIndex=previewIndex;
    canvas=document.createElement('canvas');
    // A4 at ~210 dpi: legible small print, far less memory than 300 dpi.
-   canvas.width=1748;canvas.height=2480;
+   canvas.width=mobilePDF?1050:1748;canvas.height=mobilePDF?1485:2480;
    const ctx=canvas.getContext('2d',{alpha:false});
    let exportedPages=0;
    for(let pageIndex=0;pageIndex<reportPages.length;pageIndex++){
@@ -687,7 +690,7 @@
      }
     }
     if(exportedPages++)pdf.addPage();
-    pdf.addImage(canvas.toDataURL('image/jpeg',.84),'JPEG',0,0,210,297);
+    pdf.addImage(canvas.toDataURL('image/jpeg',mobilePDF?.68:.84),'JPEG',0,0,210,297,undefined,'FAST');
     // Let the Android browser flush each page before drawing the next one.
     await new Promise(resolve=>setTimeout(resolve,0));
      }
@@ -697,6 +700,7 @@
     }
    }
    previewIndex=initialPreviewIndex;
+   error({message:'Preparando download do PDF…'});
    pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+'.pdf');
    error({message:'PDF A4 exportado com a lauda original e as fotografias do álbum.'});
   }catch(e){console.error(e);error(e)}
