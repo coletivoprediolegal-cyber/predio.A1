@@ -167,7 +167,7 @@
    '<p class="rf-source">'+escape(state.album.titulo)+' · <span id="rf-photo-count">'+shown+' de '+total+' fotos</span>'+
    '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
    '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+ '<label>Iniciar fotos em <input id="rf-start-number" type="number" min="1" max="99999" step="1" inputmode="numeric" value="'+state.startNumber+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ 
-   '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button></div>'+
+   '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button><button type="button" id="rf-pdf-light" class="rf-primary">PDF Light</button></div>'+
    '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
    '<span id="rf-text-hint"></span></div>'+
@@ -188,7 +188,8 @@
   dialog.querySelector('#rf-close').onclick=close;
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
   dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;preview();};
-  dialog.querySelector('#rf-pdf').onclick=exportPDF;
+  dialog.querySelector('#rf-pdf').onclick=()=>exportPDF(false);
+  dialog.querySelector('#rf-pdf-light').onclick=()=>exportPDF(true);
   dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;preview()};
   dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;preview()};
   dialog.querySelector('#rf-page-prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);preview()};
@@ -556,7 +557,7 @@
   const included=new Set(items.map(i=>i.fotografia_id));
   state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,destaque_no_relatorio:!!originals.get(i.fotografia_id).source.destaque,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;state.startNumber=1;dirty=false;render();
  }catch(e){error(e)}finally{busy=false}}
- async function exportPDF(){
+ async function exportPDF(light=false){
   if(busy)return;
   busy=true;const generation=revision;let print,restorePage,canvas;
   try{
@@ -575,7 +576,7 @@
    const initialPreviewIndex=previewIndex;
    canvas=document.createElement('canvas');
    // A4 at ~210 dpi: legible small print, far less memory than 300 dpi.
-   canvas.width=mobilePDF?1050:1748;canvas.height=mobilePDF?1485:2480;
+   canvas.width=light?700:(mobilePDF?1050:1748);canvas.height=light?990:(mobilePDF?1485:2480);
    const ctx=canvas.getContext('2d',{alpha:false});
    let exportedPages=0;
    for(let pageIndex=0;pageIndex<reportPages.length;pageIndex++){
@@ -692,7 +693,7 @@
      }
     }
     if(exportedPages++)pdf.addPage();
-    pdf.addImage(canvas.toDataURL('image/jpeg',mobilePDF?.68:.84),'JPEG',0,0,210,297,undefined,'FAST');
+    pdf.addImage(canvas.toDataURL('image/jpeg',light?.58:(mobilePDF?.68:.84)),'JPEG',0,0,210,297,undefined,'FAST');
     // Let the Android browser flush each page before drawing the next one.
     await new Promise(resolve=>setTimeout(resolve,0));
      }
@@ -704,7 +705,7 @@
    }
    previewIndex=initialPreviewIndex;
    error({message:'Preparando download do PDF…'});
-   pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+'.pdf');
+   pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+(light?'-LIGHT':'')+'.pdf');
    error({message:'PDF A4 exportado com a lauda original e as fotografias do álbum.'});
   }catch(e){console.error(e);error(e)}
   finally{print?.remove();restorePage?.();if(canvas){canvas.width=canvas.height=1}dialog.inert=false;busy=false}
