@@ -167,7 +167,7 @@
    '<p class="rf-source">'+escape(state.album.titulo)+' · <span id="rf-photo-count">'+shown+' de '+total+' fotos</span>'+
    '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
    '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+ '<label>Iniciar fotos em <input id="rf-start-number" type="number" min="1" max="99999" step="1" inputmode="numeric" value="'+state.startNumber+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ 
-   '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button><button type="button" id="rf-pdf-light" class="rf-primary">PDF Light</button></div>'+
+   '<label>Exportar da foto <input id="rf-export-from" type="number" min="1" step="1" inputmode="numeric" value="1" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label><label>até <input id="rf-export-to" type="number" min="1" step="1" inputmode="numeric" value="'+total+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button><button type="button" id="rf-pdf-light" class="rf-primary">PDF Light</button></div>'+
    '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
    '<span id="rf-text-hint"></span></div>'+
@@ -559,8 +559,13 @@
  }catch(e){error(e)}finally{busy=false}}
  async function exportPDF(light=false){
   if(busy)return;
-  busy=true;const generation=revision;let print,restorePage,canvas;
+  busy=true;const generation=revision;let print,restorePage,canvas;const originalIncluded=state.items.map(item=>item.incluir);let exportRange=null;
   try{
+   const from=Number(dialog.querySelector('#rf-export-from')?.value||1);
+   const to=Number(dialog.querySelector('#rf-export-to')?.value||state.items.length);
+   if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<1||to<from||to>state.items.length)throw new Error('Informe um intervalo válido entre 1 e '+state.items.length+'.');
+   exportRange={from,to};
+   state.items.forEach((item,index)=>{item.incluir=originalIncluded[index]&&index+1>=from&&index+1<=to});
    if(!state.items.some(i=>i.incluir))throw new Error('Nenhuma fotografia disponível para o relatório.');
    dialog.inert=true;
    print=document.createElement('div');
@@ -713,10 +718,10 @@
    }
    previewIndex=initialPreviewIndex;
    error({message:'Preparando download do PDF…'});
-   pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+(light?'-LIGHT':'')+'.pdf');
+   pdf.save(('Relatorio-fotografico-'+(state.album.titulo||'album')).replace(/[^\p{L}\p{N} _-]/gu,'').slice(0,100)+(light?'-LIGHT':'')+'-fotos-'+exportRange.from+'-a-'+exportRange.to+'.pdf');
    error({message:'PDF A4 exportado com a lauda original e as fotografias do álbum.'});
   }catch(e){console.error(e);error(e)}
-  finally{print?.remove();restorePage?.();if(canvas){canvas.width=canvas.height=1}dialog.inert=false;busy=false}
+  finally{state.items.forEach((item,index)=>{item.incluir=originalIncluded[index]});print?.remove();restorePage?.();if(canvas){canvas.width=canvas.height=1}dialog.inert=false;busy=false;preview()}
  }
  // The existing album remains the source; this adds only a report action.
  const albumContent=document.querySelector('#pl-album-content');
