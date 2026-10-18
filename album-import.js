@@ -13,7 +13,7 @@
  function show(){box.hidden=false;document.body.style.overflow='hidden'}
  function close(){if(processing){abort=true;return}box.hidden=true;document.body.style.overflow='';content.replaceChildren()}
  box.querySelector('.pl-import-close').onclick=close;
- box.querySelector('.pl-import-shade').onclick=close;
+ box.querySelector('.pl-import-shade').onclick=()=>{if(!processing)close()};
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!box.hidden&&!processing)close()});
  async function admin(){
   const {data:{session},error:e}=await sb.auth.getSession();
@@ -69,7 +69,7 @@
    input.remove();
    if(!files.length)return;
    selectedAlbum=albumId;afterImport=onImported;
-   uploadFiles(files).catch(e=>{console.error('Importação:',e);alert('Erro na importação: '+e.message)});
+   uploadFiles(files).catch(e=>{console.error('Importação:',e);processing=false;show();const status=content.querySelector('#pl-import-errors');if(status)status.textContent='Importação interrompida: '+(e.message||'erro desconhecido')+'. As fotos já salvas permanecem no álbum.';else alert('Erro na importação: '+e.message)});
   };
   input.addEventListener('cancel',()=>input.remove(),{once:true});
   input.click();
@@ -79,6 +79,8 @@
   try{await admin()}catch(e){alert(e.message);return}
   show();processing=true;abort=false;
   let saved=0,failed=0,withCapture=0,withoutCapture=0;
+  const total=files.length;
+  const errors=[];
   const maxMB=50;
   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Importando fotografias</h2>'+
    '<p class="pl-import-description">Os arquivos originais serão armazenados no Supabase e vinculados ao álbum, mantendo a resolução disponível no arquivo selecionado.</p>'+
@@ -86,11 +88,12 @@
    '<progress max="'+files.length+'" value="0" id="pl-import-progress"></progress>'+
    '<p id="pl-import-current" class="pl-import-current">Iniciando…</p>'+
    '<div class="pl-import-actions"><button type="button" class="pl-import-secondary" id="pl-import-abort">Parar após esta foto</button></div>'+
-   '<p class="pl-import-status" id="pl-import-errors" role="status"></p>';
+   '<p class="pl-import-status" id="pl-import-errors" role="status"></p>'+
+   '<p class="pl-import-status" id="pl-import-timing" aria-live="polite"></p>';
   content.querySelector('#pl-import-abort').onclick=()=>{abort=true;content.querySelector('#pl-import-abort').disabled=true;content.querySelector('#pl-import-abort').textContent='Parando…'};
-  for(let index=0;index<files.length;index++){
+  for(let index=0;index<total;index++){
    if(abort)break;
-   const file=files[index],spec=mimeType(file);
+   const file=files[index],spec=mimeType(file),started=performance.now();
    const current=content.querySelector('#pl-import-current');
    if(current)current.textContent='Foto '+(index+1)+' · '+file.name;
    if(!spec||file.size<1||file.size>maxMB*1024*1024){failed++;content.querySelector('#pl-import-errors').textContent='Alguns arquivos não são suportados ou excedem 50 MB.'}
@@ -109,14 +112,18 @@
      saved++;
      if(capture?.capturadaEm)withCapture++;else withoutCapture++;
     }catch(e){
-     failed++;console.warn('Não foi possível importar',file.name,e);
+     failed++;errors.push(file.name+': '+(e.message||'falha desconhecida'));console.warn('Não foi possível importar',file.name,e);
      content.querySelector('#pl-import-errors').textContent='Houve '+failed+' falha(s) de importação; os demais arquivos continuarão.';
     }
    }
+   const elapsed=Math.round((performance.now()-started)/1000);
+   const timing=content.querySelector('#pl-import-timing');if(timing)timing.textContent='Última foto: '+(file.size/1048576).toFixed(1)+' MB · '+elapsed+' s · '+saved+' salva(s), '+failed+' falha(s).';
+   files[index]=null; // liberar referência ao arquivo já processado
    content.querySelector('#pl-import-progress').value=index+1;
    content.querySelector('#pl-import-finished').textContent=String(index+1);
   }
   processing=false;
+  if(errors.length){const el=content.querySelector('#pl-import-errors');if(el)el.textContent='Falhas: '+errors.slice(0,3).join(' | ')+(errors.length>3?' (e outras '+(errors.length-3)+')':'');}
   const imported=content.querySelector('#pl-import-current');
   if(imported)imported.textContent=saved+' foto(s) importadas · '+withCapture+' com data original · '+withoutCapture+' sem data original'+(failed?' · '+failed+' falha(s)':'')+(abort?' · Importação interrompida':'');
   const actions=content.querySelector('.pl-import-actions');
