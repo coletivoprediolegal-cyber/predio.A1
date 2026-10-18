@@ -585,7 +585,11 @@
     const items=reportPages[pageIndex].items;
     // Signed URLs point to the original files; reuse those already loaded by the
     // preview instead of re-downloading 37 high-resolution photographs through JS.
+    let releaseOriginals=()=>{};
     try{
+     // Download only this page's originals, avoiding expired signed URLs and
+     // keeping memory bounded instead of retaining hundreds of image blobs.
+     releaseOriginals=await prepareOriginalsForPDF(items,generation);
      prepareSheets(print,false,true);
      const imgs=[...print.querySelectorAll('img')];
      for(const img of imgs){
@@ -593,9 +597,7 @@
       catch(e){
        const cell=img.closest('.rf-cell');
        if(!cell)throw new Error('Não foi possível ler a folha institucional do relatório.');
-       // A damaged photograph must not cancel the remaining report.
-       cell.dataset.unreadable='true';
-       console.warn('Fotografia não legível no PDF:',cell.dataset.photoNumber,e);
+       throw new Error('Não foi possível carregar a fotografia '+(cell.dataset.photoNumber||'?')+'. PDF interrompido para evitar um relatório com imagens vazias. '+(e?.message||''));
       }
      }
      const sheetsOnPage=[...print.querySelectorAll('.rf-sheet')];
@@ -652,16 +654,14 @@
      const p=pos(container);
      const frame=cell.classList.contains('rf-featured');
      ctx.save();rounded(p.x,p.y,p.w,p.h,4*sx);ctx.clip();
-     if(cell.dataset.unreadable==='true'||!photo.naturalWidth||!photo.naturalHeight){
-      ctx.fillStyle='#f0f0f0';ctx.fillRect(p.x,p.y,p.w,p.h);
-      ctx.fillStyle='#555';ctx.font='18px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText('Imagem indisponível',p.x+p.w/2,p.y+p.h/2);
+     if(!photo.naturalWidth||!photo.naturalHeight){
+      throw new Error('Fotografia '+cell.dataset.photoNumber+' não carregada. Exportação interrompida.');
      }else{
       const cropScale=Math.max(p.w/photo.naturalWidth,p.h/photo.naturalHeight);
       const srcW=p.w/cropScale,srcH=p.h/cropScale;
       const srcX=(photo.naturalWidth-srcW)/2,srcY=(photo.naturalHeight-srcH)/2;
       try{ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h)}
-      catch(e){console.warn('Erro ao desenhar fotografia',cell.dataset.photoNumber,e)}
+      catch(e){throw new Error('Falha ao inserir fotografia '+cell.dataset.photoNumber+' no PDF: '+e.message)}
      }
      ctx.restore();
      if(frame){ctx.strokeStyle='#b77c36';ctx.lineWidth=Math.max(3,3.6*sx);rounded(p.x,p.y,p.w,p.h,4*sx);ctx.stroke()}
@@ -698,6 +698,7 @@
      }
     }finally{
      print.replaceChildren();
+     releaseOriginals();
      restorePage?.();restorePage=null;
     }
    }
