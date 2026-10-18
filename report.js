@@ -586,8 +586,11 @@
      for(const img of imgs){
       try{await img.decode()}
       catch(e){
-       const photo=img.closest('.rf-cell')?.dataset.photoNumber;
-       throw new Error(photo?'Não foi possível ler a imagem da foto '+photo+'. Verifique o arquivo original (HEIC ou imagem danificada).':'Não foi possível ler a folha institucional do relatório.');
+       const cell=img.closest('.rf-cell');
+       if(!cell)throw new Error('Não foi possível ler a folha institucional do relatório.');
+       // A damaged photograph must not cancel the remaining report.
+       cell.dataset.unreadable='true';
+       console.warn('Fotografia não legível no PDF:',cell.dataset.photoNumber,e);
       }
      }
      const sheetsOnPage=[...print.querySelectorAll('.rf-sheet')];
@@ -643,12 +646,18 @@
      const container=cell.querySelector('.rf-photo'),photo=cell.querySelector('.rf-photo img');
      const p=pos(container);
      const frame=cell.classList.contains('rf-featured');
-     const cropScale=Math.max(p.w/photo.naturalWidth,p.h/photo.naturalHeight);
-     const srcW=p.w/cropScale,srcH=p.h/cropScale;
-     const srcX=(photo.naturalWidth-srcW)/2,srcY=(photo.naturalHeight-srcH)/2;
      ctx.save();rounded(p.x,p.y,p.w,p.h,4*sx);ctx.clip();
-     try{ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h)}
-     catch(e){ctx.restore();throw new Error('Erro ao inserir a foto '+cell.dataset.photoNumber+' no PDF: '+e.message)}
+     if(cell.dataset.unreadable==='true'||!photo.naturalWidth||!photo.naturalHeight){
+      ctx.fillStyle='#f0f0f0';ctx.fillRect(p.x,p.y,p.w,p.h);
+      ctx.fillStyle='#555';ctx.font='18px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('Imagem indisponível',p.x+p.w/2,p.y+p.h/2);
+     }else{
+      const cropScale=Math.max(p.w/photo.naturalWidth,p.h/photo.naturalHeight);
+      const srcW=p.w/cropScale,srcH=p.h/cropScale;
+      const srcX=(photo.naturalWidth-srcW)/2,srcY=(photo.naturalHeight-srcH)/2;
+      try{ctx.drawImage(photo,srcX,srcY,srcW,srcH,p.x,p.y,p.w,p.h)}
+      catch(e){console.warn('Erro ao desenhar fotografia',cell.dataset.photoNumber,e)}
+     }
      ctx.restore();
      if(frame){ctx.strokeStyle='#b77c36';ctx.lineWidth=Math.max(3,3.6*sx);rounded(p.x,p.y,p.w,p.h,4*sx);ctx.stroke()}
      const number=cell.querySelector('.rf-number');
