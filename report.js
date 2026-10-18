@@ -590,7 +590,15 @@
     try{
      // Download only this page's originals, avoiding expired signed URLs and
      // keeping memory bounded instead of retaining hundreds of image blobs.
-     releaseOriginals=await prepareOriginalsForPDF(items,generation);
+     // Prefer the same browser-decodable signed URLs used successfully by the preview.
+     // Refresh signatures for this page rather than downloading huge originals into JS memory.
+     const originals=items.filter(item=>item.incluir&&item.source.arquivo_caminho);
+     if(originals.length){
+      const paths=originals.map(item=>item.source.arquivo_caminho);
+      const signed=await sb.storage.from('predio-legal-fotos').createSignedUrls(paths,3600);
+      if(signed.error)throw signed.error;
+      originals.forEach((item,i)=>{if(signed.data?.[i]?.signedUrl)item.url=signed.data[i].signedUrl});
+     }
      prepareSheets(print,false,true);
      const imgs=[...print.querySelectorAll('img')];
      for(const img of imgs){
