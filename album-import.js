@@ -78,7 +78,7 @@
   if(processing)return;
   try{await admin()}catch(e){alert(e.message);return}
   show();processing=true;abort=false;
-  let saved=0,failed=0,withCapture=0,withoutCapture=0;
+  let saved=0,duplicates=0,failed=0,withCapture=0,withoutCapture=0;
   const total=files.length;
   const errors=[];
   const maxMB=50;
@@ -103,21 +103,30 @@
      const capture=await window.PLPhotoMetadata?.read(file);
      const upload=await sb.storage.from('predio-legal-fotos').upload(name,file,{contentType:spec.mime,cacheControl:'3600',upsert:false});
      if(upload.error)throw upload.error;
-     const record=await sb.rpc('pl_album_foto_registrar_v2',{p_album_id:selectedAlbum,p_caminho:name,p_nome:file.name,
+     const record=await sb.rpc('pl_album_foto_registrar_dedupe',{p_album_id:selectedAlbum,p_caminho:name,p_nome:file.name,
       p_mime:spec.mime,p_bytes:file.size,p_largura:null,p_altura:null,
       p_capturada_em:capture?.capturadaEm||null,
       p_data_original_local:capture?.dataOriginalLocal||null,
       p_data_origem:capture?.origem||null});
-     if(record.error||!record.data)throw record.error||new Error('Não foi possível registrar a fotografia');
-     saved++;
-     if(capture?.capturadaEm)withCapture++;else withoutCapture++;
+     if(record.error||!record.data){
+      await sb.storage.from('predio-legal-fotos').remove([name]);
+      throw record.error||new Error('Não foi possível registrar a fotografia');
+     }
+     if(record.data.duplicada){
+      duplicates++;
+      const removed=await sb.storage.from('predio-legal-fotos').remove([name]);
+      if(removed.error)console.warn('Arquivo repetido não pôde ser removido do armazenamento temporário',removed.error);
+     }else{
+      saved++;
+      if(capture?.capturadaEm)withCapture++;else withoutCapture++;
+     }
     }catch(e){
      failed++;errors.push(file.name+': '+(e.message||'falha desconhecida'));console.warn('Não foi possível importar',file.name,e);
      content.querySelector('#pl-import-errors').textContent='Houve '+failed+' falha(s) de importação; os demais arquivos continuarão.';
     }
    }
    const elapsed=Math.round((performance.now()-started)/1000);
-   const timing=content.querySelector('#pl-import-timing');if(timing)timing.textContent='Última foto: '+(file.size/1048576).toFixed(1)+' MB · '+elapsed+' s · '+saved+' salva(s), '+failed+' falha(s).';
+   const timing=content.querySelector('#pl-import-timing');if(timing)timing.textContent='Última foto: '+(file.size/1048576).toFixed(1)+' MB · '+elapsed+' s · '+saved+' salva(s), '+duplicates+' repetida(s), '+failed+' falha(s).';
    files[index]=null; // liberar referência ao arquivo já processado
    content.querySelector('#pl-import-progress').value=index+1;
    content.querySelector('#pl-import-finished').textContent=String(index+1);
@@ -125,7 +134,7 @@
   processing=false;
   if(errors.length){const el=content.querySelector('#pl-import-errors');if(el)el.textContent='Falhas: '+errors.slice(0,3).join(' | ')+(errors.length>3?' (e outras '+(errors.length-3)+')':'');}
   const imported=content.querySelector('#pl-import-current');
-  if(imported)imported.textContent=saved+' foto(s) importadas · '+withCapture+' com data original · '+withoutCapture+' sem data original'+(failed?' · '+failed+' falha(s)':'')+(abort?' · Importação interrompida':'');
+  if(imported)imported.textContent=saved+' foto(s) importadas · '+duplicates+' repetida(s) ignorada(s) · '+withCapture+' com data original · '+withoutCapture+' sem data original'+(failed?' · '+failed+' falha(s)':'')+(abort?' · Importação interrompida':'');
   const actions=content.querySelector('.pl-import-actions');
   if(actions)actions.innerHTML='<button class="pl-import-primary" type="button" id="pl-import-done">Voltar ao álbum</button>';
   if(typeof afterImport==='function'){
