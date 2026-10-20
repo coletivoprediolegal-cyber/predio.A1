@@ -8,7 +8,19 @@ for(const size of layouts){
  assert.deepEqual(pages.flatMap(p=>p.items.map(i=>i.id)),items.map(i=>i.id));
  assert.equal(JSON.stringify(items),original);
 }
-assert.deepEqual(paginate([{id:1,incluir:false},{id:2,incluir:true,fotos_por_pagina_override:1},{id:3,incluir:true},{id:4,incluir:true,fotos_por_pagina_override:16}],4).map(p=>[p.size,p.items.map(i=>i.id)]),[[1,[2]],[4,[3]],[16,[4]]]);
+const sections=[
+ ...Array.from({length:8},(_,id)=>({id,incluir:true,secao_id:'terreo',secao_nome:'Térreo'})),
+ {id:8,incluir:false,secao_id:'terreo'},
+ ...Array.from({length:15},(_,id)=>({id:id+9,incluir:true,secao_id:'subsolo',secao_nome:'1º subsolo'})),
+ ...Array.from({length:2},(_,id)=>({id:id+24,incluir:true,secao_id:'cobertura',secao_nome:'Cobertura'}))
+];
+const original=JSON.stringify(sections);
+const pages=paginate(sections,12);
+assert.deepEqual(pages.map(page=>page.items.length),[8,12,3,2]);
+assert.deepEqual(pages.map(page=>page.items[0].secao_nome),['Térreo','1º subsolo','1º subsolo','Cobertura']);
+assert.ok(pages.every(page=>page.items.every(item=>item.secao_id===page.items[0].secao_id)));
+assert.equal(JSON.stringify(sections),original);
+assert.deepEqual(paginate([{id:1,incluir:false},{id:2,incluir:true},{id:3,incluir:true}],4).map(p=>p.items.map(i=>i.id)),[[2,3]]);
 assert.deepEqual(paginate([],4),[]);
 assert.throws(()=>paginate([],3));
-console.log('PASS: all layouts, mixed pages, selection, ordering, source immutability');
+console.log('PASS: layouts, page break by section, selection, order, immutability');
