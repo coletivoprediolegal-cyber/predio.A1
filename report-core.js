@@ -6,8 +6,15 @@
   if(!layouts.includes(size))throw new Error('Layout inválido');
   const visible=(items||[]).filter(item=>item&&item.incluir);
   const pages=[];
-  for(let i=0;i<visible.length;i+=size){
-   pages.push({size,items:visible.slice(i,i+size)});
+  let page=null,previousSection=null;
+  for(const item of visible){
+   const section=item.secao_id?String(item.secao_id):'name:'+String(item.secao_nome||'').trim();
+   if(!page||page.items.length===size||section!==previousSection){
+    page={size,items:[]};
+    pages.push(page);
+   }
+   page.items.push(item);
+   previousSection=section;
   }
   return pages;
  }
