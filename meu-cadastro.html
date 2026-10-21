@@ -1,0 +1,31 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Meu cadastro · Prédio Legal</title><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"><style>
+*{box-sizing:border-box}body{margin:0;background:#f5f0e7;color:#182a46;font:14px 'Instrument Sans',Arial,sans-serif}main{max-width:600px;margin:auto;padding:26px 18px}h1{font-size:26px;margin:15px 0 5px}.card{background:#fff9;border:1px solid #ded6c9;border-radius:15px;padding:20px;margin:18px 0}.muted{color:#746f68;line-height:1.5}label{display:block;margin:12px 0 5px;font-size:12px;font-weight:600}input,select{width:100%;padding:12px;border:1px solid #d4c9ba;border-radius:9px;background:#fff;color:#182a46;font:inherit}button{border:0;border-radius:22px;background:#213855;color:white;padding:12px 18px;margin-top:16px;font:600 13px 'Instrument Sans',sans-serif}a{color:#906b42}.error{color:#a32e2e}@media(prefers-color-scheme:dark){body{background:#06152c;color:#f3f1ec}.card{background:#17243a;border-color:#35445d}input,select{background:#0a1d35;color:white;border-color:#536071}.muted{color:#bbc4ce}}
+</style></head><body><main><a href="index.html#mais">← Voltar ao aplicativo</a><h1>Meu cadastro</h1><p class="muted">Complete seus dados e indique sua unidade. A identificação do apartamento será conferida antes de liberar informações daquela unidade.</p><div id="content" role="status">Carregando seu cadastro…</div></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script>
+(async()=>{
+ const sb=window.supabase?.createClient('https://tqjjncxeiskqlzfjgnfd.supabase.co','sb_publishable_54qcYhkY_PIAL4NXI9IV_Q_kwWJAyaO');
+ const box=document.getElementById('content'),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ try{
+  if(!sb)throw Error('Conexão indisponível.');
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw Error('Entre no aplicativo com seu e-mail e sua senha.');
+  const activation=await sb.rpc('pl_ativar_acesso_morador');if(activation.error)throw activation.error;
+  const {data,error}=await sb.from('morador_unidades').select('id,empreendimento_id,nome,email,telefone,funcao,local_id,unidade_confirmada').eq('usuario_id',session.user.id).eq('ativo',true);
+  if(error)throw error;
+  if(!data?.length)throw Error('Este e-mail ainda não está autorizado em nenhum empreendimento.');
+  box.replaceChildren();
+  for(const m of data){
+   const result=await sb.rpc('pl_opcoes_unidades_morador',{p_empreendimento_id:m.empreendimento_id});
+   if(result.error)throw result.error;
+   const info=result.data||{},units=info.unidades||[];
+   const card=document.createElement('form');card.className='card';
+   card.innerHTML='<h2>'+esc(info.empreendimento||'Empreendimento')+'</h2><p class="muted">E-mail autorizado: '+esc(m.email)+'</p><label>Seu nome<input name="nome" required maxlength="180" value="'+esc(m.nome||'')+'"></label><label>Telefone<input name="telefone" type="tel" value="'+esc(m.telefone||'')+'"></label><label>Você é</label><select name="funcao">'+[['morador','Morador'],['proprietario','Proprietário'],['inquilino','Inquilino'],['responsavel','Responsável']].map(([key,label])=>'<option value="'+key+'" '+(m.funcao===key?'selected':'')+'>'+label+'</option>').join('')+'</select><label>Seu bloco e apartamento</label><select name="local"><option value="">Escolher depois</option>'+units.map(u=>'<option value="'+esc(u.id)+'" '+(u.id===m.local_id?'selected':'')+'>'+esc([u.bloco?'Bloco '+u.bloco:'',u.numero?'Apto '+u.numero:''].filter(Boolean).join(' · '))+'</option>').join('')+'</select><p class="muted" data-unit-status>'+(m.local_id?(m.unidade_confirmada?'Unidade confirmada.':'Unidade aguardando confirmação.'):'Unidade ainda não indicada.')+'</p><button type="submit">Salvar meu cadastro</button><p data-feedback role="status"></p>';
+   card.onsubmit=async e=>{
+    e.preventDefault();const button=card.querySelector('button'),feedback=card.querySelector('[data-feedback]'),form=new FormData(card);button.disabled=true;
+    const response=await sb.rpc('pl_atualizar_meu_cadastro_morador',{p_empreendimento_id:m.empreendimento_id,p_nome:String(form.get('nome')),p_telefone:String(form.get('telefone')),p_local_id:form.get('local')||null,p_funcao:String(form.get('funcao'))});
+    button.disabled=false;feedback.textContent=response.error?response.error.message:'Cadastro salvo. '+(response.data.unidade_confirmada?'Unidade confirmada.':'A unidade indicada aguarda conferência.');feedback.className=response.error?'error':'muted';
+    if(!response.error)card.querySelector('[data-unit-status]').textContent=response.data.unidade_confirmada?'Unidade confirmada.':'Unidade aguardando confirmação.';
+   };
+   box.append(card);
+  }
+ }catch(err){box.innerHTML='<p class="card error">'+esc(err.message||String(err))+'</p>'}
+})();
+</script></body></html>
