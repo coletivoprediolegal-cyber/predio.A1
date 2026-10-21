@@ -39,7 +39,7 @@
   const id=$('enterprise').value;if(!id){$('residents').textContent='Selecione um empreendimento.';return}
   const {data,error}=await sb.from('morador_unidades').select('id,nome,email,telefone,funcao,local_id,usuario_id,ativo,unidade_confirmada').eq('empreendimento_id',id).order('nome').limit(1000);
   if(error){$('residents').textContent=error.message;return}
-  $('residents').innerHTML='<table><thead><tr><th>Nome</th><th>Unidade</th><th>Função</th><th>Acesso</th></tr></thead><tbody>'+(data||[]).map(m=>'<tr><td>'+escape(m.nome)+'<br><small>'+escape(m.email)+' · '+escape(m.telefone||'')+'</small></td><td>'+escape(unitLabel(units.find(u=>u.id===m.local_id)||{}))+'</td><td>'+escape(m.funcao)+'</td><td>'+(!m.ativo?'Inativo':m.usuario_id?'Ativo':'Pendente')+'</td></tr>').join('')+'</tbody></table>';
+  $('residents').innerHTML='<table><thead><tr><th>Nome</th><th>Unidade</th><th>Função</th><th>Acesso</th></tr></thead><tbody>'+(data||[]).map(m=>'<tr><td>'+escape(m.nome)+'<br><small>'+escape(m.email)+' · '+escape(m.telefone||'')+'</small></td><td>'+escape(unitLabel(units.find(u=>u.id===m.local_id)||{}))+'</td><td>'+escape(m.funcao)+'</td><td>'+(!m.ativo?'Inativo':m.usuario_id?'Ativo':'Pendente')+(m.local_id&&!m.unidade_confirmada?' · Unidade pendente <button type="button" data-confirm="'+escape(m.id)+'">Confirmar unidade</button>':'')+'</td></tr>').join('')+'</tbody></table>';
  }
  async function saveRows(rows){
   const id=$('enterprise').value;if(!id)throw Error('Selecione um empreendimento.');
