@@ -151,7 +151,14 @@
   const {data:response,error}=await sb.functions.invoke('pl-google-photos',{
    body:{action,googleToken:session.provider_token,...details}
   });
-  if(error)throw new Error('Importação indisponível: '+(error.message||'serviço não respondeu'));
+  if(error){
+   let detail='';
+   try{
+    const body=await error.context?.json();
+    detail=typeof body?.error==='string'?body.error:typeof body?.message==='string'?body.message:'';
+   }catch{}
+   throw new Error(detail||'Importação indisponível: '+(error.message||'serviço não respondeu'));
+  }
   if(response?.error)throw new Error(response.error);
   return response;
  }
@@ -185,7 +192,7 @@
   let result;
   try{result=await googleApi('create')}
   catch(e){
-   googleMessage('A integração direta ainda não está autorizada para esta conta. Você já pode importar pelo seletor do celular. Para liberar a conexão direta, cadastre a conta como testadora no Google Cloud → Google Auth Platform → Público-alvo (Audience). Detalhe: '+e.message,true);
+   googleMessage('A conexão direta com o Google Fotos falhou: '+e.message+'. Você também pode selecionar as fotos pelo celular.',true);
    return;
   }
   if(!result?.id||!result?.pickerUri){googleMessage('O Google não retornou uma sessão de seleção.',true);return}
