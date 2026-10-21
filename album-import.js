@@ -198,7 +198,7 @@
   if(!result?.id||!result?.pickerUri){googleMessage('O Google não retornou uma sessão de seleção.',true);return}
   pickerSession=result.id;pickerPolling=true;
   content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Selecionar no Google Fotos</h2>'+
-   '<p class="pl-import-description">Toque em Abrir Google Fotos, selecione as imagens e conclua a escolha. A seleção pode conter centenas de fotografias.</p>'+
+   '<p class="pl-import-description">No Google Fotos, abra o álbum desejado, selecione suas fotografias e confirme. Você pode escolher centenas de imagens em uma seleção. Ao repetir a importação mais tarde, o Prédio Legal verificará duplicações dos arquivos já registrados.</p>'+
    '<div class="pl-import-actions"><a class="pl-import-primary" id="pl-google-open" href="'+html(result.pickerUri)+'" target="_blank" rel="noopener noreferrer">Abrir Google Fotos ↗</a>'+
    '<button type="button" class="pl-import-secondary" id="pl-google-check">Conferir seleção</button></div>'+
    '<p class="pl-import-status" role="status">Aguardando seleção…</p>';
@@ -232,7 +232,7 @@
    }while(token);
    const selected=items.filter(item=>item.type==='PHOTO');
    content.innerHTML='<div class="pl-import-eyebrow">FOTOGRAFIAS</div><h2>Importar para o álbum</h2>'+
-    '<p class="pl-import-description">'+selected.length+' fotografias selecionadas'+(items.length>selected.length?' · '+(items.length-selected.length)+' vídeos ignorados':'')+'. Os arquivos serão importados um de cada vez, mantendo a resolução disponível.</p>'+
+    '<p class="pl-import-description">'+selected.length+' fotografias selecionadas'+(items.length>selected.length?' · '+(items.length-selected.length)+' vídeos ignorados':'')+'. Os arquivos serão importados um de cada vez. Fotos já registradas poderão ser identificadas como duplicadas. A seleção não é uma sincronização automática do álbum Google.</p>'+
     '<div class="pl-import-actions"><button type="button" class="pl-import-primary" id="pl-google-import" '+(selected.length?'':'disabled')+'>Importar '+selected.length+' fotografias</button>'+
     '<button type="button" class="pl-import-secondary" id="pl-google-back">Cancelar</button></div>'+
     '<progress max="'+selected.length+'" value="0" id="pl-google-progress"></progress><p class="pl-import-status" role="status"></p>';
