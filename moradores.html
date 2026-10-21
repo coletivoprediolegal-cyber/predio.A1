@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prédio Legal · Moradores</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;background:#f5f0e7;color:#172b49;font:14px 'Instrument Sans',Arial,sans-serif}main{max-width:750px;margin:auto;padding:24px 18px 60px}h1{font-size:26px;margin:13px 0 4px;letter-spacing:-.03em}h2{font-size:17px;margin:0 0 12px}.muted{color:#716f6b;line-height:1.5}.card{background:#fff9;border:1px solid #ded6c9;border-radius:14px;padding:18px;margin:17px 0}label{display:block;font-size:12px;font-weight:600;margin:12px 0 6px}select,input[type=file],input[type=text],input[type=email]{width:100%;padding:11px 12px;background:#fffdf9;color:#172b49;border:1px solid #d5cabc;border-radius:9px;font:inherit}button,.button{border:0;border-radius:22px;background:#233957;color:#fff;padding:11px 17px;font:600 13px 'Instrument Sans',sans-serif;cursor:pointer;display:inline-block;text-decoration:none;margin:8px 8px 0 0}button:disabled{opacity:.5;cursor:default}.secondary{background:transparent;color:#846640;border:1px solid #cdbba6}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.status{min-height:26px;margin-top:12px;line-height:1.5}.error{color:#a32e2e}.ok{color:#216342}table{border-collapse:collapse;width:100%;font-size:12px}td,th{border-bottom:1px solid #e1d9cc;padding:8px 6px;text-align:left}th{color:#766b5e;font-weight:600}.scroll{overflow:auto;max-height:420px}.fail{color:#a32e2e}small{line-height:1.5}a{color:#92602d}@media(prefers-color-scheme:dark){body{background:#06152c;color:#f1eee7}.card{background:#17243a;border-color:#34435a}.muted{color:#bbc4ce}select,input[type=file],input[type=text],input[type=email]{background:#0a1d35;color:white;border-color:#536071}td,th{border-color:#3e4a5f}}
+</style></head><body><main>
+<a href="index.html#mais">← Voltar ao aplicativo</a><h1>Moradores e acesso</h1><p class="muted">Cadastre moradores por unidade. O acesso é ativado quando cada pessoa entra com a conta Google do e-mail cadastrado.</p>
+<div id="guard" class="card" role="status">Verificando sua autorização…</div>
+<div id="app" hidden>
+<section class="card"><h2>Cadastro individual</h2><label for="enterprise">Empreendimento</label><select id="enterprise"><option value="">Selecione…</option></select>
+<div class="row"><div style="flex:1;min-width:130px"><label for="unit">Bloco e apartamento</label><select id="unit"><option value="">Selecione o empreendimento…</option></select></div><div style="flex:1;min-width:130px"><label for="role">Função</label><select id="role"><option value="morador">Morador</option><option value="proprietario">Proprietário</option><option value="inquilino">Inquilino</option><option value="responsavel">Responsável</option></select></div></div>
+<label for="name">Nome</label><input id="name" type="text" maxlength="180" autocomplete="name">
+<label for="email">E-mail da conta Google</label><input id="email" type="email" maxlength="320" autocomplete="email">
+<label for="phone">Telefone</label><input id="phone" type="text" autocomplete="tel">
+<button id="save" type="button">Cadastrar morador</button></section>
+<section class="card"><h2>Importação em lote</h2><p class="muted">Baixe o modelo, preencha no Excel e envie o arquivo. As colunas são: nome, e-mail, telefone, bloco, apartamento e função. Até 500 linhas por lote.</p>
+<button id="template" type="button" class="secondary">Baixar modelo Excel</button>
+<label for="file">Planilha preenchida (.xlsx ou .csv)</label><input id="file" type="file" accept=".xlsx,.xls,.csv,text/csv">
+<p id="preview-summary" class="status" role="status"></p><div id="preview" class="scroll"></div><button id="import" type="button" hidden>Importar linhas válidas</button></section>
+<section class="card"><h2>Moradores cadastrados</h2><p class="muted">“Pendente” significa que a conta Google ainda não foi vinculada ao e-mail cadastrado.</p><div id="residents" class="scroll"></div></section>
+</div><p id="status" class="status" role="status"></p></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+(async()=>{
+ const sb=window.supabase?.createClient('https://tqjjncxeiskqlzfjgnfd.supabase.co','sb_publishable_54qcYhkY_PIAL4NXI9IV_Q_kwWJAyaO');
+ const $=id=>document.getElementById(id),status=$('status'),escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ let enterprises=[],units=[],ready=[],errors=[];
+ function show(message,bad=false){status.textContent=message;status.className='status '+(bad?'error':'ok')}
+ function key(x){return String(x??'').trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+ function unitLabel(u){return [u.bloco?'Bloco '+u.bloco:'',u.numero?'Apto '+u.numero:''].filter(Boolean).join(' · ')}
+ function updateUnits(){
+  const id=$('enterprise').value;
+  $('unit').innerHTML='<option value="">Selecione…</option>'+units.filter(u=>u.empreendimento_id===id).sort((a,b)=>unitLabel(a).localeCompare(unitLabel(b),'pt-BR',{numeric:true})).map(u=>'<option value="'+escape(u.id)+'">'+escape(unitLabel(u))+'</option>').join('');
+  ready=[];errors=[];$('preview').replaceChildren();$('preview-summary').textContent='';$('import').hidden=true;list();
+ }
+ async function list(){
+  const id=$('enterprise').value;if(!id){$('residents').textContent='Selecione um empreendimento.';return}
+  const {data,error}=await sb.from('morador_unidades').select('nome,email,telefone,funcao,local_id,usuario_id,ativo').eq('empreendimento_id',id).order('nome').limit(1000);
+  if(error){$('residents').textContent=error.message;return}
+  $('residents').innerHTML='<table><thead><tr><th>Nome</th><th>Unidade</th><th>Função</th><th>Acesso</th></tr></thead><tbody>'+(data||[]).map(m=>'<tr><td>'+escape(m.nome)+'<br><small>'+escape(m.email)+' · '+escape(m.telefone||'')+'</small></td><td>'+escape(unitLabel(units.find(u=>u.id===m.local_id)||{}))+'</td><td>'+escape(m.funcao)+'</td><td>'+(!m.ativo?'Inativo':m.usuario_id?'Ativo':'Pendente')+'</td></tr>').join('')+'</tbody></table>';
+ }
+ async function saveRows(rows){
+  const id=$('enterprise').value;if(!id)throw Error('Selecione um empreendimento.');
+  const {data,error}=await sb.rpc('pl_importar_moradores',{p_empreendimento_id:id,p_linhas:rows});
+  if(error)throw error;await list();return data.importados;
+ }
+ $('enterprise').onchange=updateUnits;
+ $('save').onclick=async()=>{const b=$('save');b.disabled=true;try{
+  const row={nome:$('name').value.trim(),email:$('email').value.trim().toLowerCase(),telefone:$('phone').value.trim(),local_id:$('unit').value,funcao:$('role').value};
+  if(!row.local_id||!row.nome||!row.email)throw Error('Preencha unidade, nome e e-mail.');
+  const n=await saveRows([row]);show(n+' morador cadastrado. Acesso pendente até o primeiro login com o mesmo e-mail.');
+  $('name').value='';$('email').value='';$('phone').value='';
+ }catch(e){show(e.message,true)}finally{b.disabled=false}};
+ $('template').onclick=()=>{
+  if(!window.XLSX){show('Leitor de Excel indisponível. Atualize a página e tente de novo.',true);return}
+  const rows=[['nome','email','telefone','bloco','apartamento','funcao'],['Maria Silva','maria@exemplo.com','11999999999','M','101','morador']];
+  const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=[{wch:26},{wch:32},{wch:18},{wch:14},{wch:16},{wch:17}];
+  const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,sheet,'Moradores');XLSX.writeFile(book,'modelo_moradores_predio_legal.xlsx');
+ };
+ $('file').onchange=async e=>{
+  ready=[];errors=[];$('import').hidden=true;$('preview').replaceChildren();
+  try{
+   if(!$('enterprise').value)throw Error('Escolha o empreendimento antes de enviar a planilha.');
+   if(!window.XLSX)throw Error('Leitor de Excel indisponível. Atualize a página.');
+   const file=e.target.files?.[0];if(!file)return;
+   const book=XLSX.read(await file.arrayBuffer(),{type:'array'}), sheet=book.Sheets[book.SheetNames[0]];
+   const rows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
+   if(!rows.length||rows.length>500)throw Error('A planilha deve ter de 1 a 500 moradores.');
+   const seen=new Set();
+   rows.forEach((r,i)=>{
+    const nome=String(r.nome||'').trim(),email=String(r.email||'').trim().toLowerCase(),telefone=String(r.telefone||'').trim(),bloco=key(r.bloco),apto=key(r.apartamento),funcao=key(r.funcao)||'morador';
+    const matching=units.filter(u=>u.empreendimento_id===$('enterprise').value&&key(u.bloco)===bloco&&key(u.numero)===apto);
+    const issues=[];
+    if(nome.length<2||!email.includes('@'))issues.push('nome ou e-mail inválido');
+    if(!bloco||!apto||matching.length!==1)issues.push('bloco/apartamento não encontrado de forma única');
+    if(!['morador','proprietario','inquilino','responsavel'].includes(funcao))issues.push('função inválida');
+    const unique=(matching[0]?.id||'')+':'+email;if(seen.has(unique))issues.push('duplicado na planilha');seen.add(unique);
+    if(issues.length)errors.push({linha:i+2,nome,email,erro:issues.join('; ')});
+    else ready.push({nome,email,telefone,local_id:matching[0].id,funcao});
+   });
+   $('preview-summary').textContent=ready.length+' linhas válidas; '+errors.length+' linhas com erro. '+(errors.length?'Corrija a planilha antes de importar.':'Confira e confirme a importação.');
+   const samples=errors.length?errors:ready.slice(0,20).map((r,i)=>({linha:i+2,nome:r.nome,email:r.email,erro:unitLabel(units.find(u=>u.id===r.local_id))}));
+   $('preview').innerHTML='<table><thead><tr><th>Linha</th><th>Nome</th><th>E-mail</th><th>Unidade / erro</th></tr></thead><tbody>'+samples.map(x=>'<tr><td>'+x.linha+'</td><td>'+escape(x.nome)+'</td><td>'+escape(x.email)+'</td><td class="'+(errors.length?'fail':'')+'">'+escape(x.erro)+'</td></tr>').join('')+'</tbody></table>';
+   $('import').hidden=!!errors.length||!ready.length;
+  }catch(err){$('preview-summary').textContent=err.message;show(err.message,true)}
+ };
+ $('import').onclick=async()=>{const b=$('import');b.disabled=true;try{const n=await saveRows(ready);show(n+' moradores importados. Eles poderão entrar com o e-mail Google cadastrado.');b.hidden=true;ready=[]}catch(e){show(e.message,true)}finally{b.disabled=false}};
+ try{
+  if(!sb)throw Error('Conexão indisponível.');
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw Error('Entre com Google no aplicativo antes de abrir esta tela.');
+  const {data:profile,error:pe}=await sb.rpc('pl_meu_perfil');if(pe)throw pe;
+  if(!profile?.ativo||profile.papel!=='administrador')throw Error('Apenas o administrador pode cadastrar moradores.');
+  const [a,b]=await Promise.all([sb.from('empreendimentos').select('id,nome').order('nome'),sb.from('locais').select('id,empreendimento_id,bloco,numero').not('numero','is',null).order('bloco').limit(5000)]);
+  if(a.error)throw a.error;if(b.error)throw b.error;
+  enterprises=a.data||[];units=b.data||[];
+  $('enterprise').innerHTML='<option value="">Selecione…</option>'+enterprises.map(x=>'<option value="'+escape(x.id)+'">'+escape(x.nome)+'</option>').join('');
+  $('guard').hidden=true;$('app').hidden=false;
+ }catch(e){$('guard').textContent=e.message||String(e);$('guard').classList.add('error')}
+})();
+</script></body></html>
