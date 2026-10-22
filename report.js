@@ -458,8 +458,9 @@
      const manifestations=(Array.isArray(raw)?raw:typeof raw==='string'?raw.split(/\n|;/):[])
       .map(v=>typeof v==='string'?v:typeof v==='object'&&v?(v.descricao||v.nome||v.label||''):'')
       .map(v=>String(v).trim()).filter(Boolean);
-     const captions=showManifestations?[...new Set(manifestations)]:[];
-     if(showPhotoNotes&&note)captions.push(note);
+     const captions=[];
+     if(showManifestations)captions.push(...[...new Set(manifestations)].map(text=>({kind:'manifestation',text})));
+     if(showPhotoNotes&&note)captions.push({kind:'note',text:note});
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'')+(captions.length>1?' rf-multi-caption':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
@@ -467,7 +468,7 @@
      '<span class="rf-number">'+(featured?'★ ':'')+escape(String(reportNumber(i)).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
-     '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(t=>'<span class="rf-caption-line">'+escape(t)+'</span>').join('')+'</figcaption>')+'</figure>';
+     '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(c=>'<span class="rf-caption-line rf-caption-'+c.kind+'">'+escape(c.text)+'</span>').join('')+'</figcaption>')+'</figure>';
    }).join('');
    const section=showSectionNames&&sectionNames.length===1?sectionNames[0]:'';
    return '<section class="rf-sheet rf-layout-'+p.size+'" data-layout="'+p.size+'"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
@@ -507,7 +508,10 @@
    if(cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1){
     const number=cap.closest('.rf-cell').dataset.photoNumber;
     overflow.push({number,body:original});
-    cap.replaceChildren(...[...cap.querySelectorAll('.rf-caption-line')].slice(0,2).map(line=>line.cloneNode(true)));
+    const lines=[...cap.querySelectorAll('.rf-caption-line')];
+     const manifestation=lines.find(line=>line.classList.contains('rf-caption-manifestation'));
+     const note=lines.find(line=>line.classList.contains('rf-caption-note'));
+     cap.replaceChildren(...[manifestation,note].filter(Boolean).map(line=>line.cloneNode(true)));
      cap.title='Texto completo nas observações finais';
     cap.style.fontSize=minimum+'pt';
    }
