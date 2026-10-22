@@ -503,26 +503,7 @@
  function prepareSheets(target,previewOnly=false,exportOnePage=false){
   target.innerHTML=sheets(previewOnly||exportOnePage)||'<p class="rf-empty-preview">Nenhuma fotografia incluída no relatório.</p>';
   const overflow=[];
-  for(const cap of target.querySelectorAll('.rf-caption')){
-   const original=cap.textContent.trim();
-   if(!original)continue;
-   const minimum=7.2;
-   let pt=parseFloat(getComputedStyle(cap).fontSize)*72/96;
-   while((cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1)&&pt>minimum){
-    pt=Math.max(minimum,pt-.35);
-    cap.style.fontSize=pt.toFixed(2)+'pt';
-   }
-   if(cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1){
-    const number=cap.closest('.rf-cell').dataset.photoNumber;
-    overflow.push({number,body:original});
-    const lines=[...cap.querySelectorAll('.rf-caption-line')];
-     const manifestation=lines.find(line=>line.classList.contains('rf-caption-manifestation'));
-     const note=lines.find(line=>line.classList.contains('rf-caption-note'));
-     cap.replaceChildren(...[manifestation,note].filter(Boolean).map(line=>line.cloneNode(true)));
-     cap.title='Texto completo nas observações finais';
-    cap.style.fontSize=minimum+'pt';
-   }
-  }
+  // As legendas ficam completas no próprio relatório; não truncar nem mover texto automaticamente.
   if(overflow.length&&!previewOnly){
    let page=null,list=null;
    for(const note of overflow){
