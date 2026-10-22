@@ -240,3 +240,10 @@
 /* Hierarquia visual: manifestação principal; observação secundária e discreta. */
 .rf-caption-note{color:#7a818c!important;font-weight:400!important;font-size:.94em}
 .rf-caption-manifestation{color:#24364f;font-weight:500}
+
+/* 12 fotos: a legenda ocupa o vão vertical entre linhas, preservando a área da foto. */
+.rf-layout-12 .rf-cells{row-gap:7mm}
+.rf-layout-12 .rf-cell{position:relative;overflow:visible}
+.rf-layout-12 .rf-caption{position:absolute;left:0;right:0;top:calc(100% + .8mm);height:5.4mm;margin:0;overflow:hidden;font-size:7.4pt;line-height:1.08;z-index:2}
+.rf-layout-12 .rf-multi-caption .rf-caption{height:5.4mm;font-size:7.25pt;line-height:1.06}
+.rf-layout-12 .rf-caption-manifestation+.rf-caption-note{margin-top:.15mm}
