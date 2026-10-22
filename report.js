@@ -451,10 +451,14 @@
    const cells=p.items.map(i=>{
     const anomaly=i.source.nivel_anomalia;
     const note=(i.legenda||'').trim();
-    const sectionCaption=(i.secao_nome||'').trim();
-    const environmentCaption=(i.ambiente_nome||'').trim();
-    const automaticCaption=[sectionCaption,environmentCaption].filter(Boolean).join(' | ');
-    const captions=[automaticCaption,showPhotoNotes?note:''].filter(Boolean);
+    // A seção aparece apenas no cabeçalho; cada manifestação tem sua própria linha.
+     const meta=i.source.metadados||{};
+     const raw=meta.manifestacoes_observadas??meta.manifestacoes??meta.manifestacao_observada??i.source.manifestacoes_observadas??i.source.manifestacao_observada??[];
+     const manifestations=(Array.isArray(raw)?raw:typeof raw==='string'?raw.split(/\n|;/):[])
+      .map(v=>typeof v==='string'?v:typeof v==='object'&&v?(v.descricao||v.nome||v.label||''):'')
+      .map(v=>String(v).trim()).filter(Boolean);
+     const captions=[...new Set(manifestations)];
+     if(showPhotoNotes&&note)captions.push(note);
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
@@ -462,7 +466,7 @@
      '<span class="rf-number">'+(featured?'★ ':'')+escape(String(reportNumber(i)).padStart(2,'0'))+'</span>'+
      (anomaly?'<span class="rf-alert'+anomalyClass+'" aria-label="Anomalia" title="Anomalia">!</span>':'')+
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
-     '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(escape).join(' · ')+'</figcaption>')+'</figure>';
+     '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(t=>'<span class="rf-caption-line">'+escape(t)+'</span>').join('')+'</figcaption>')+'</figure>';
    }).join('');
    const section=showSectionNames&&sectionNames.length===1?sectionNames[0]:'';
    return '<section class="rf-sheet rf-layout-'+p.size+'" data-layout="'+p.size+'"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
