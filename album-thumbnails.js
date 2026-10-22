@@ -90,5 +90,41 @@
    batch.forEach((p,index)=>p.thumbUrl=result.data?.[index]?.signedUrl||'');
   }
  }
- window.PLAlbumThumbs={mount,prepare,original,transparent};
+
+ let bulkRunning=false;
+ async function backfillAll(onProgress){
+  if(bulkRunning)return;
+  bulkRunning=true;
+  let done=0,failed=0,total=0;
+  try{
+   const {data:pending,error}=await sb.rpc('pl_miniaturas_pendentes',{p_limite:500});
+   if(error)throw error;
+   if(!Array.isArray(pending))throw new Error('Lista de miniaturas indisponível');
+   total=pending.length;
+   onProgress({done,failed,total});
+   let cursor=0;
+   async function worker(){
+    while(cursor<total){
+     const item=pending[cursor++];
+     try{
+      const {data:signed,error:signError}=await bucket.createSignedUrl(item.arquivo_caminho,900);
+      if(signError||!signed?.signedUrl)throw signError||new Error('Original indisponível');
+      const response=await fetch(signed.signedUrl);
+      if(!response.ok)throw new Error('Falha ao baixar original');
+      const blob=await makeJpeg(await response.blob());
+      const path=item.album_id+'/thumbs/'+item.id+'.jpg';
+      const uploaded=await bucket.upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});
+      if(uploaded.error && !/already exists|duplicate|409/i.test(uploaded.error.message||''))throw uploaded.error;
+      const saved=await sb.rpc('pl_registrar_miniatura',{p_album_id:item.album_id,p_foto_id:item.id,p_caminho:path});
+      if(saved.error||saved.data!==true)throw saved.error||new Error('Registro não concluído');
+      done++;
+     }catch(e){failed++;console.warn('Miniatura antiga:',item.id,e)}
+     onProgress({done,failed,total});
+    }
+   }
+   await Promise.all([worker(),worker()]);
+   return {done,failed,total};
+  }finally{bulkRunning=false}
+ }
+ window.PLAlbumThumbs={mount,prepare,original,transparent,backfillAll};
 })();
