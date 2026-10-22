@@ -232,3 +232,7 @@
 /* Reserve two readable lines only for photos that have both manifestation and note. */
 .rf-layout-12 .rf-multi-caption .rf-caption{height:9.5mm;font-size:7.6pt;line-height:1.14}
 .rf-layout-16 .rf-multi-caption .rf-caption{height:9mm;font-size:7.3pt;line-height:1.12}
+
+/* Manifestação e observação são camadas independentes no relatório. */
+.rf-caption-note{font-weight:500;color:#26354b}
+.rf-caption-manifestation+.rf-caption-note{margin-top:.35mm}
