@@ -5,7 +5,7 @@
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
  let albumChanged=false;
- let showPhotoNotes=true,showSectionNames=true;
+ let showPhotoNotes=true,showManifestations=true,showSectionNames=true;
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
  function error(e){const box=dialog.querySelector('.rf-message');if(box)box.textContent=e.message||String(e)}
@@ -169,7 +169,7 @@
    '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
    '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+ '<label>Iniciar fotos em <input id="rf-start-number" type="number" min="1" max="99999" step="1" inputmode="numeric" value="'+state.startNumber+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ 
    '<label>Exportar da foto <input id="rf-export-from" type="number" min="1" step="1" inputmode="numeric" value="1" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label><label>até <input id="rf-export-to" type="number" min="1" step="1" inputmode="numeric" value="'+total+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button><button type="button" id="rf-pdf-light" class="rf-primary">PDF Light</button></div>'+
-   '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
+   '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-manifestations" '+(showManifestations?'checked':'')+'> Manifestações</label><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
    '<span id="rf-text-hint"></span></div>'+
    '<p class="rf-message" role="status" aria-live="polite"></p>'+
@@ -191,7 +191,8 @@
   dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;preview();};
   dialog.querySelector('#rf-pdf').onclick=()=>exportPDF(false);
   dialog.querySelector('#rf-pdf-light').onclick=()=>exportPDF(true);
-  dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;preview()};
+  dialog.querySelector('#rf-show-manifestations').onchange=e=>{showManifestations=e.target.checked;preview()};
+   dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;preview()};
   dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;preview()};
   dialog.querySelector('#rf-page-prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);preview()};
   dialog.querySelector('#rf-page-next').onclick=()=>{previewIndex=Math.min(totalPages()-1,previewIndex+1);preview()};
@@ -457,7 +458,7 @@
      const manifestations=(Array.isArray(raw)?raw:typeof raw==='string'?raw.split(/\n|;/):[])
       .map(v=>typeof v==='string'?v:typeof v==='object'&&v?(v.descricao||v.nome||v.label||''):'')
       .map(v=>String(v).trim()).filter(Boolean);
-     const captions=[...new Set(manifestations)];
+     const captions=showManifestations?[...new Set(manifestations)]:[];
      if(showPhotoNotes&&note)captions.push(note);
     const featured=i.destaque_no_relatorio;
     const cls='rf-cell'+(featured?' rf-featured':'');
@@ -506,7 +507,7 @@
    if(cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1){
     const number=cap.closest('.rf-cell').dataset.photoNumber;
     overflow.push({number,body:original});
-    cap.textContent=(cap.querySelector('.rf-caption-line')?.textContent||'').trim()||'Obs. completa ao final';
+    cap.textContent=(cap.querySelector('.rf-caption-line')?.textContent||'').trim();
      cap.title='Texto completo nas observações finais';
     cap.style.fontSize=minimum+'pt';
    }
