@@ -449,15 +449,22 @@
    const name=state.empreendimento||state.album.titulo||'';
    const ref=state.album.data_vistoria?new Date(state.album.data_vistoria+'T12:00:00').toLocaleDateString('pt-BR'):'';
    const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
+   const compactSlashes=text=>String(text||'').replace(/\s*\/\s*/g,'/').trim();
+   const compactObservation=text=>compactSlashes(String(text||'')
+    .replace(/^Referências do registro:\s*/i,'')
+    .replace(/\s*\(conforme registro\)\s*/gi,'')
+    .replace(/\s*;\s*/g,'; ')
+    .replace(/(?:;\s*)?Registro original da manifestação:.*$/i,'')
+    .replace(/;\s*$/,'').trim());
    const cells=p.items.map(i=>{
     const anomaly=i.source.nivel_anomalia;
-    const note=(i.legenda||'').trim();
+    const note=compactObservation(i.legenda||'');
     // A seção aparece apenas no cabeçalho; cada manifestação tem sua própria linha.
      const meta=i.source.metadados||{};
      const raw=i.manifestacao_observada||meta.manifestacoes_observadas||meta.manifestacoes||meta.manifestacao_observada||i.source.manifestacoes_observadas||i.source.manifestacao_observada||[];
      const manifestations=(Array.isArray(raw)?raw:typeof raw==='string'?raw.split(/\n|;/):[])
       .map(v=>typeof v==='string'?v:typeof v==='object'&&v?(v.descricao||v.nome||v.label||''):'')
-      .map(v=>String(v).trim()).filter(Boolean);
+      .map(v=>compactSlashes(v)).filter(Boolean);
      const captions=[];
      if(showManifestations)captions.push(...[...new Set(manifestations)].map(text=>({kind:'manifestation',text})));
      if(showPhotoNotes&&note)captions.push({kind:'note',text:note});
