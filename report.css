@@ -236,3 +236,7 @@
 /* Manifestação e observação são camadas independentes no relatório. */
 .rf-caption-note{font-weight:500;color:#26354b}
 .rf-caption-manifestation+.rf-caption-note{margin-top:.35mm}
+
+/* Hierarquia visual: manifestação principal; observação secundária e discreta. */
+.rf-caption-note{color:#7a818c!important;font-weight:400!important;font-size:.94em}
+.rf-caption-manifestation{color:#24364f;font-weight:500}
