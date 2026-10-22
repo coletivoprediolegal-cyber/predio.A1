@@ -461,7 +461,7 @@
      const captions=showManifestations?[...new Set(manifestations)]:[];
      if(showPhotoNotes&&note)captions.push(note);
     const featured=i.destaque_no_relatorio;
-    const cls='rf-cell'+(featured?' rf-featured':'');
+    const cls='rf-cell'+(featured?' rf-featured':'')+(captions.length>1?' rf-multi-caption':'');
     const anomalyClass=anomaly==='vermelha'?' rf-alert-red':' rf-alert-yellow';
     return '<figure class="'+cls+'" data-photo-number="'+escape(reportNumber(i))+'"><div class="rf-photo"><img crossorigin="anonymous" src="'+escape(i.url)+'" alt="Fotografia '+escape(reportNumber(i))+'">'+
      '<span class="rf-number">'+(featured?'★ ':'')+escape(String(reportNumber(i)).padStart(2,'0'))+'</span>'+
@@ -507,7 +507,7 @@
    if(cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1){
     const number=cap.closest('.rf-cell').dataset.photoNumber;
     overflow.push({number,body:original});
-    cap.textContent=(cap.querySelector('.rf-caption-line')?.textContent||'').trim();
+    cap.replaceChildren(...[...cap.querySelectorAll('.rf-caption-line')].slice(0,2).map(line=>line.cloneNode(true)));
      cap.title='Texto completo nas observações finais';
     cap.style.fontSize=minimum+'pt';
    }
