@@ -253,3 +253,6 @@
 .rf-layout-12 .rf-cell{position:static;overflow:visible}
 .rf-layout-12 .rf-caption,.rf-layout-12 .rf-multi-caption .rf-caption{position:static;left:auto;right:auto;top:auto;height:auto;min-height:0;max-height:none;margin:0;overflow:visible;font-size:7.35pt;line-height:1.08;z-index:auto}
 .rf-layout-12 .rf-caption-manifestation+.rf-caption-note{margin-top:.15mm}
+
+/* 12 fotos: legenda completa, sem clamp/corte automático. */
+.rf-layout-12 .rf-caption,.rf-layout-12 .rf-multi-caption .rf-caption{display:block!important;height:auto!important;max-height:none!important;overflow:visible!important;-webkit-line-clamp:unset!important;white-space:normal!important}
