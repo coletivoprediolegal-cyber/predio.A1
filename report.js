@@ -506,7 +506,8 @@
    if(cap.scrollHeight>cap.clientHeight+1||cap.scrollWidth>cap.clientWidth+1){
     const number=cap.closest('.rf-cell').dataset.photoNumber;
     overflow.push({number,body:original});
-    cap.textContent='Obs. completa ao final';
+    cap.textContent=(cap.querySelector('.rf-caption-line')?.textContent||'').trim()||'Obs. completa ao final';
+     cap.title='Texto completo nas observações finais';
     cap.style.fontSize=minimum+'pt';
    }
   }
