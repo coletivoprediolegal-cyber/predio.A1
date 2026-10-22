@@ -697,7 +697,13 @@
      const feature=cell.querySelector('.rf-feature-mark');
      if(feature){const a=pos(feature);ctx.fillStyle='#bd9c65';ctx.font='bold '+Math.max(13,a.h*.9)+'px Arial';ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText('★',a.x+a.w,a.y+a.h)}
      const caption=cell.querySelector('.rf-caption');
-     if(caption?.textContent.trim())write(caption,'#26354b',400,'left',true);
+     if(caption?.textContent.trim()){
+      const manifestation=caption.querySelector('.rf-caption-manifestation');
+      const note=caption.querySelector('.rf-caption-note');
+      if(manifestation)write(manifestation,'#26354b',500,'left',false);
+      if(note)write(note,'#7a818c',400,'left',false);
+      if(!manifestation&&!note)write(caption,'#26354b',400,'left',false);
+     }
     }
     if(sheet.classList.contains('rf-appendix')){
      write(sheet.querySelector('.rf-appendix .rf-section'),'#26354b',700);
