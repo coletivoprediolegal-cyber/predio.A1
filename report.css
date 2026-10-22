@@ -228,3 +228,7 @@
 /* Layout de 12: legenda compacta, preservando a área fotográfica. */
 .rf-layout-12 .rf-caption{height:5.8mm;font-size:7.6pt;line-height:1.14;overflow:hidden}
 .rf-layout-12 .rf-caption-line+.rf-caption-line{margin-top:0}
+
+/* Reserve two readable lines only for photos that have both manifestation and note. */
+.rf-layout-12 .rf-multi-caption .rf-caption{height:9.5mm;font-size:7.6pt;line-height:1.14}
+.rf-layout-16 .rf-multi-caption .rf-caption{height:9mm;font-size:7.3pt;line-height:1.12}
