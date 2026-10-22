@@ -90,7 +90,7 @@
     album={id:albumId,titulo:d.titulo,assunto:d.assunto||'',data_vistoria:d.data};
     const members=await sb.rpc(professional?'pl_album_secoes_profissionais':'pl_demo_album_sections',{p_album_id:albumId});
     if(!members.error&&Array.isArray(members.data))sections=members.data;
-    links=(d.fotos||[]).map(f=>({ordem:f.numero,secao_id:f.secao_id,fotografias:{
+    links=(d.fotos||[]).map(f=>({ordem:f.numero,secao_id:f.secao_id,manifestacao_observada:f.manifestacao_observada||'',fotografias:{
       id:f.id,arquivo_caminho:f.arquivo_caminho||null,metadados:professional?(f.metadados||{}):{demo:true,referencia_url:f.url},nome_original:f.nome,
       destaque:f.destaque,nivel_anomalia:f.anomalia||f.nivel_anomalia,observacao_tecnica:f.observacao||f.observacao_tecnica||f.legenda,
       oculta_relatorio:f.oculta,excluida_em:f.excluida?'excluida':null
