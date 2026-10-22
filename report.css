@@ -219,3 +219,8 @@
 .rf-report-visible-options label{display:inline-flex;align-items:center;gap:6px;min-height:28px;white-space:nowrap;cursor:pointer}
 .rf-report-visible-options input{margin:0;width:16px;height:16px;accent-color:#273957}
 .rf-report-visible-options span{color:#ad8a64;font-size:11px}
+
+/* Legendas técnicas: uma manifestação por linha; sem reservar espaço quando ausentes. */
+.rf-caption-line{display:block;line-height:1.2;overflow-wrap:anywhere}
+.rf-caption-line+.rf-caption-line{margin-top:.35mm}
+.rf-layout-12 .rf-caption{line-height:1.2}
