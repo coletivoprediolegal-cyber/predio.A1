@@ -105,7 +105,7 @@
     const auth=await sb.auth.getSession();
     if(!auth.data?.session)throw new Error('Entre com Google em Minha conta para criar relatórios profissionais.');
     album=await check(sb.from('albuns').select('*').eq('id',albumId).single());
-    links=await check(sb.from('album_fotografias').select('ordem,secao_id,local_id,locais(nome,local_pai_id),fotografias(*)').eq('album_id',albumId).order('ordem'));
+    links=await check(sb.from('album_fotografias').select('ordem,secao_id,local_id,manifestacao_observada,locais(nome,local_pai_id),fotografias(*)').eq('album_id',albumId).order('ordem'));
     try{sections=await check(sb.from('album_secoes').select('id,nome').eq('album_id',albumId).order('ordem'))}catch(e){sections=[]}
     try{
      const rel=await check(sb.from('album_jobs').select('jobs(titulo,clientes(nome))').eq('album_id',albumId).limit(1));
@@ -135,7 +135,7 @@
     state.items.push({
      fotografia_id:f.id,source:f,url,numero:link.ordem,secao_id:sectionByPhoto.get(String(f.id))||link.secao_id||null,
      secao_nome:sectionNames.get(String(sectionByPhoto.get(String(f.id))||link.secao_id))||f.secao_nome||f.nome_secao||'',
-     ambiente_nome:link.locais?.local_pai_id?(link.locais?.nome||''):'',
+     ambiente_nome:link.locais?.local_pai_id?(link.locais?.nome||''):'',manifestacao_observada:link.manifestacao_observada||'',
      incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
      legenda:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',
      observacao:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',destaque_no_relatorio:!!f.destaque,
@@ -453,7 +453,7 @@
     const note=(i.legenda||'').trim();
     // A seção aparece apenas no cabeçalho; cada manifestação tem sua própria linha.
      const meta=i.source.metadados||{};
-     const raw=meta.manifestacoes_observadas??meta.manifestacoes??meta.manifestacao_observada??i.source.manifestacoes_observadas??i.source.manifestacao_observada??[];
+     const raw=i.manifestacao_observada||meta.manifestacoes_observadas||meta.manifestacoes||meta.manifestacao_observada||i.source.manifestacoes_observadas||i.source.manifestacao_observada||[];
      const manifestations=(Array.isArray(raw)?raw:typeof raw==='string'?raw.split(/\n|;/):[])
       .map(v=>typeof v==='string'?v:typeof v==='object'&&v?(v.descricao||v.nome||v.label||''):'')
       .map(v=>String(v).trim()).filter(Boolean);
