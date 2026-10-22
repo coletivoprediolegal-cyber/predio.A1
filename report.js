@@ -5,7 +5,7 @@
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
  let albumChanged=false;
- let showPhotoNotes=false,showSectionNames=true;
+ let showPhotoNotes=true,showSectionNames=true;
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
  function error(e){const box=dialog.querySelector('.rf-message');if(box)box.textContent=e.message||String(e)}
