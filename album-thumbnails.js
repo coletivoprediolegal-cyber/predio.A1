@@ -75,7 +75,7 @@
    }
    pump();
   },{rootMargin:'250px'});
-  grid.querySelectorAll('img[data-pl-thumb]').forEach(img=>observer.observe(img));
+  grid.querySelectorAll('img[data-pl-thumb]').forEach(img=>{const photo=byId.get(img.dataset.plThumb);if(photo&&!photo.thumbUrl)observer.observe(img)});
  }
  async function prepare(photos,albumId){
   const missing=photos.filter(p=>p.arquivo_caminho);
