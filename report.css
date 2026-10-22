@@ -224,3 +224,7 @@
 .rf-caption-line{display:block;line-height:1.2;overflow-wrap:anywhere}
 .rf-caption-line+.rf-caption-line{margin-top:.35mm}
 .rf-layout-12 .rf-caption{line-height:1.2}
+
+/* Layout de 12: legenda compacta, preservando a área fotográfica. */
+.rf-layout-12 .rf-caption{height:5.8mm;font-size:7.6pt;line-height:1.14;overflow:hidden}
+.rf-layout-12 .rf-caption-line+.rf-caption-line{margin-top:0}
