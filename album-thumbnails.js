@@ -75,20 +75,23 @@
    }
    pump();
   },{rootMargin:'250px'});
-  grid.querySelectorAll('img[data-pl-thumb]').forEach(img=>{const photo=byId.get(img.dataset.plThumb);if(photo&&!photo.thumbUrl)observer.observe(img)});
+  grid.querySelectorAll('img[data-pl-thumb]').forEach(img=>{const photo=byId.get(img.dataset.plThumb);if(photo&&!photo.thumbUrl&&!photo.thumbPending)observer.observe(img)});
  }
  async function prepare(photos,albumId){
   const missing=photos.filter(p=>p.arquivo_caminho);
   if(!missing.length)return;
-  const {data:paths,error}=await sb.rpc('pl_album_miniaturas',{p_album_id:albumId});
-  if(error){console.warn('Miniaturas indisponíveis:',error);return}
-  const entries=missing.filter(p=>paths?.[p.id]);
-  for(let i=0;i<entries.length;i+=100){
-   const batch=entries.slice(i,i+100);
-   const result=await bucket.createSignedUrls(batch.map(p=>paths[p.id]),3600);
-   if(result.error){console.warn('Falha ao carregar miniaturas:',result.error);continue}
-   batch.forEach((p,index)=>p.thumbUrl=result.data?.[index]?.signedUrl||'');
-  }
+  missing.forEach(p=>p.thumbPending=true);
+  try{
+   const {data:paths,error}=await sb.rpc('pl_album_miniaturas',{p_album_id:albumId});
+   if(error){console.warn('Miniaturas indisponíveis:',error);return}
+   const entries=missing.filter(p=>paths?.[p.id]);
+   await Promise.all(Array.from({length:Math.ceil(entries.length/100)},async(_,i)=>{
+    const batch=entries.slice(i*100,(i+1)*100);
+    const result=await bucket.createSignedUrls(batch.map(p=>paths[p.id]),3600);
+    if(result.error){console.warn('Falha ao carregar miniaturas:',result.error);return}
+    batch.forEach((p,index)=>p.thumbUrl=result.data?.[index]?.signedUrl||'');
+   }));
+  }finally{missing.forEach(p=>p.thumbPending=false)}
  }
 
  let bulkRunning=false;
