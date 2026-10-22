@@ -247,3 +247,9 @@
 .rf-layout-12 .rf-caption{position:absolute;left:0;right:0;top:calc(100% + .8mm);height:5.4mm;margin:0;overflow:hidden;font-size:7.4pt;line-height:1.08;z-index:2}
 .rf-layout-12 .rf-multi-caption .rf-caption{height:5.4mm;font-size:7.25pt;line-height:1.06}
 .rf-layout-12 .rf-caption-manifestation+.rf-caption-note{margin-top:.15mm}
+
+/* Correção: legenda volta ao fluxo normal; o espaço extra fica entre as linhas. */
+.rf-layout-12 .rf-cells{row-gap:4.8mm}
+.rf-layout-12 .rf-cell{position:static;overflow:visible}
+.rf-layout-12 .rf-caption,.rf-layout-12 .rf-multi-caption .rf-caption{position:static;left:auto;right:auto;top:auto;height:auto;min-height:0;max-height:none;margin:0;overflow:visible;font-size:7.35pt;line-height:1.08;z-index:auto}
+.rf-layout-12 .rf-caption-manifestation+.rf-caption-note{margin-top:.15mm}
