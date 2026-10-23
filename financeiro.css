@@ -1,0 +1,32 @@
+#pl-finance{padding-bottom:96px}
+.pl-finance-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:12px 0 18px}
+.pl-finance-head h1{font:400 25px 'Libre Baskerville',Georgia,serif;margin:4px 0}
+.pl-finance-head p{margin:0;color:#807a72;font-size:12px}
+.pl-finance-back{border:0;background:transparent;color:var(--copper);font:600 12px 'Instrument Sans',sans-serif;padding:7px 0;cursor:pointer}
+.pl-finance-search{display:flex;align-items:center;gap:9px;border:1px solid #e1d8ca;background:#fff9;border-radius:22px;padding:0 14px;height:42px;margin:0 0 12px}
+.pl-finance-search input{border:0;outline:0;background:transparent;width:100%;font:13px 'Instrument Sans',sans-serif;color:inherit}
+.pl-finance-tabs{display:flex;gap:7px;overflow:auto;padding:2px 0 14px;scrollbar-width:none}
+.pl-finance-tab{flex:none;border:1px solid #ded3c3;background:transparent;color:#776f66;border-radius:18px;padding:8px 12px;font:600 11px 'Instrument Sans',sans-serif;cursor:pointer}
+.pl-finance-tab.is-active{background:var(--navy);border-color:var(--navy);color:#fff}
+.pl-finance-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:17px}
+.pl-finance-stat{border:1px solid #e3dacd;background:#fff8;border-radius:12px;padding:12px}
+.pl-finance-stat b{display:block;font-size:16px}.pl-finance-stat small{color:#827a71;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.pl-finance-list{border-top:1px solid #e4dbce}
+.pl-finance-row{width:100%;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(100px,.65fr) 22px;align-items:center;gap:12px;border:0;border-bottom:1px solid #e4dbce;background:transparent;text-align:left;color:inherit;padding:15px 2px;cursor:pointer;font:inherit}
+.pl-finance-row:hover{background:#fff5}.pl-finance-client{font-weight:700;font-size:12px}.pl-finance-job{font:400 14px 'Libre Baskerville',Georgia,serif;margin:3px 0}.pl-finance-meta{font-size:10px;color:#8a837a}
+.pl-finance-action{text-align:right}.pl-finance-value{display:block;font-weight:700;font-size:12px}.pl-finance-status{display:inline-flex;align-items:center;gap:5px;margin-top:5px;border-radius:12px;padding:4px 7px;font-size:10px;font-weight:700;text-transform:uppercase}
+.pl-finance-status[data-status="cobrar"]{background:#fbe6e3;color:#a23c36}.pl-finance-status[data-status="emitir"]{background:#e8f4f8;color:#24738c}.pl-finance-status[data-status="apurar"]{background:#f6e9f2;color:#a1437f}.pl-finance-status[data-status="conferir"]{background:#e4f3f2;color:#197b78}.pl-finance-status[data-status="receber"]{background:#edf0dd;color:#687426}.pl-finance-status[data-status="pago"]{background:#ecebe7;color:#89857e}
+.pl-finance-row.is-paid{opacity:.48}.pl-finance-row.is-paid:hover{opacity:.72}
+.pl-finance-empty{color:#847e75;padding:26px 4px;font-size:12px}
+.pl-finance-client-link{border:0;background:transparent;color:var(--copper);padding:0;cursor:pointer;font:700 12px 'Instrument Sans',sans-serif}
+.pl-finance-detail-card{border:1px solid #e2d8ca;background:#fff8;border-radius:14px;padding:16px;margin:10px 0 18px}
+.pl-finance-detail-card h2{font:400 18px 'Libre Baskerville',Georgia,serif;margin:6px 0}.pl-finance-total{font-size:22px;font-weight:600;margin-top:12px}
+.pl-installment{display:grid;grid-template-columns:minmax(90px,.8fr) minmax(80px,.8fr) minmax(95px,.9fr) minmax(95px,.8fr);gap:10px;align-items:center;border-bottom:1px solid #e5ddd2;padding:13px 2px;font-size:11px}
+.pl-installment.is-paid{opacity:.45}.pl-installment strong{font-size:12px}.pl-installment .nf{color:#8c847a}.pl-installment-note{grid-column:1/-1;color:#7d766d;font-size:10px}
+.pl-finance-loader{padding:30px 0;color:#80796f}
+#pl-open-finance{display:block;width:100%;text-align:left;color:inherit;cursor:pointer}
+@media(max-width:560px){
+ .pl-finance-summary{grid-template-columns:1fr 1fr}.pl-finance-summary .pl-finance-stat:last-child{grid-column:1/-1}
+ .pl-finance-row{grid-template-columns:minmax(0,1fr) minmax(92px,.52fr) 12px}
+ .pl-installment{grid-template-columns:1fr 1fr}.pl-installment-note{grid-column:1/-1}
+}
