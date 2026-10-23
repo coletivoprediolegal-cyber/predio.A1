@@ -256,3 +256,25 @@
 
 /* 12 fotos: legenda completa, sem clamp/corte automático. */
 .rf-layout-12 .rf-caption,.rf-layout-12 .rf-multi-caption .rf-caption{display:block!important;height:auto!important;max-height:none!important;overflow:visible!important;-webkit-line-clamp:unset!important;white-space:normal!important}
+
+
+/* Legendas e observações integrais em todos os layouts. */
+.rf-caption,
+.rf-multi-caption .rf-caption{
+ display:block!important;
+ height:auto!important;
+ min-height:0!important;
+ max-height:none!important;
+ overflow:visible!important;
+ text-overflow:clip!important;
+ white-space:pre-wrap!important;
+ -webkit-line-clamp:unset!important;
+ -webkit-box-orient:initial!important;
+}
+.rf-caption-line{
+ display:block!important;
+ overflow:visible!important;
+ text-overflow:clip!important;
+ white-space:pre-wrap!important;
+ overflow-wrap:anywhere!important;
+}
