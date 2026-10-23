@@ -375,7 +375,7 @@ async function openProfessionalJob(id){
 
  const job=professionalJobs.find(x=>x.id===id);
  if(!job)return alert('Job não encontrado na sua lista autorizada.');
- professionalJob=id;plCurrentJob=id;window.PLRecordEditor?.set('job',id);switchTo('job');
+ professionalJob=id;plCurrentJob=id;window.PLRecordEditor?.set('job',id);switchTo('job');setTimeout(()=>window.PLJobFeed?.mount(id),1000);
  if((/^Condomínio\b/i.test(job.cliente||'') || /monitoramento/i.test(job.titulo||'')) && window.PLCondoWorkspace?.mount){await window.PLCondoWorkspace.mount($('#pl-job-content'),job);return}
  $('#pl-job-content').innerHTML='<p class="pl-empty">Carregando álbuns profissionais…</p>';
  const {data:albums,error}=await window.plSupabase.from('albuns')
