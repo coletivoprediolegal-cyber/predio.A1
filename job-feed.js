@@ -40,7 +40,6 @@ function attach(jobId){
  const observer=new MutationObserver(()=>{
   clearTimeout(timer);
   timer=setTimeout(()=>{
-   if(!document.querySelector('#pl-job')?.classList.contains('active')&&!document.querySelector('#pl-job')?.classList.contains('visible'))return;
    if(!host.querySelector('#pl-job-feed')&&!host.querySelector('.pl-empty')&&host.children.length){observer.disconnect();mount(jobId)}
   },120);
  });
