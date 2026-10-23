@@ -87,13 +87,14 @@ function detail(){
  const save=isAdmin?'<button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar observações</button>':'';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
  const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
- return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<h3>Álbuns vinculados</h3>'+albumRows+albumActions+'</div>';
+ return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><h3>Álbuns vinculados</h3>'+albumRows+albumActions+'</div>';
 }
 function render(){
  if(!root)return;
  const heading='<div class="cw-jobhead"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' / JOB</div><h1>'+esc(job.titulo)+'</h1><p>Consultoria e monitoramento predial mensal</p></div>';
  root.innerHTML='<div class="cw-app">'+heading+breadcrumb()+(errorText?'<p class="cw-error" role="alert">'+esc(errorText)+'</p>':'')+(state.detail?detail():!state.area?overview():state.area==='comum'?common():privativa())+'</div>';
  bind();
+ if(state.detail&&window.PLMiniHistory)window.PLMiniHistory.mount(root,job.id,state.detail,isAdmin).catch(e=>console.warn('Histórico do mini-job',e));
 }
 async function reload(){
  const {data,error}=await sb().rpc('pl_condo_workspace_data',{p_job_id:job.id});
