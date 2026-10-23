@@ -253,7 +253,7 @@ function fold(title,body,count,expanded){
 return '<details class="pl-fold"'+(expanded?' open':'')+'><summary>'+esc(title)+(count===null?'':' ('+count+')')+'</summary><div class="pl-fold-body">'+body+'</div></details>';
 }
 async function openJob(id){
-professionalJob=null;plCurrentJob=id;window.PLRecordEditor?.set('job',id);
+professionalJob=null;plCurrentJob=id;window.PLRecordEditor?.set('job',id);setTimeout(()=>window.PLJobFeed?.mount(id),1000);
 const j=(activeClient?.jobs||[]).find(x=>x.id===id);if(!j)return;
 $('#pl-job-content').innerHTML='<p class="pl-empty">Carregando pasta do job...</p>';switchTo('job');
 const [{data,error},{data:faturamento,error:fatError},{data:extras}]=await Promise.all([window.plSupabase.rpc('pl_demo_job_contents',{p_job_id:id}),window.plSupabase.rpc('pl_demo_job_faturamento',{p_job_id:id}),window.plSupabase.rpc('pl_demo_job_extra_photos',{p_job_id:id})]);
