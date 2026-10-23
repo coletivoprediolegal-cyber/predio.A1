@@ -3,7 +3,7 @@
 const root=document.getElementById('pl-finance');
 const entry=document.getElementById('pl-open-finance');
 if(!root||!entry)return;
-const state={jobs:[],parcels:[],view:'overview',filter:'resumo',query:'',selectedJob:null,selectedClient:null,loading:false,scroll:0};
+const state={jobs:[],parcels:[],view:'overview',filter:'resumo',query:'',selectedJob:null,selectedClient:null,loading:false,scroll:0,jobTab:'parcelas',editingParcel:null,formError:''};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
 const date=v=>v?new Intl.DateTimeFormat('pt-BR').format(new Date(v+'T12:00:00')):'Sem vencimento';
@@ -91,14 +91,41 @@ function renderOverview(){
  renderShell('<label class="pl-finance-search">⌕<input id="pl-finance-query" value="'+esc(state.query)+'" placeholder="Buscar cliente, job, prédio ou nota"></label><div class="pl-finance-tabs" role="tablist">'+['resumo','apurar','emitir','cobrar','receber','todos'].map(f=>'<button class="pl-finance-tab'+(state.filter===f?' is-active':'')+'" data-fin-filter="'+f+'">'+label(f)+'</button>').join('')+'</div><div class="pl-finance-summary"><div class="pl-finance-stat"><b>'+money(st.open)+'</b><small>A receber</small></div><div class="pl-finance-stat"><b>'+st.overdue+'</b><small>Para cobrar</small></div><div class="pl-finance-stat"><b>'+st.next+'</b><small>Próximos</small></div></div><div class="pl-finance-list">'+(items.length?items.map(row).join(''):'<div class="pl-finance-empty">Nenhum trabalho neste filtro.</div>')+'</div>',false);
  document.getElementById('pl-finance-query').oninput=e=>{state.query=e.target.value;renderOverview()};
  root.querySelectorAll('[data-fin-filter]').forEach(b=>b.onclick=()=>{state.filter=b.dataset.finFilter;renderOverview()});
- root.querySelectorAll('[data-fin-job]').forEach(b=>b.onclick=()=>{state.scroll=window.scrollY;state.selectedJob=state.jobs.find(j=>j.id===b.dataset.finJob);state.view='job';render()});
+ root.querySelectorAll('[data-fin-job]').forEach(b=>b.onclick=()=>{state.scroll=window.scrollY;state.selectedJob=state.jobs.find(j=>j.id===b.dataset.finJob);state.view='job';state.jobTab='parcelas';state.editingParcel=null;render()});
+}
+function installmentForm(p){
+ const edit=!!p;
+ return '<form id="pl-finance-form" class="pl-finance-edit"><h3>'+(edit?'Editar parcela':'Nova parcela')+'</h3><div class="pl-finance-fields"><label>Número da parcela<input name="numero" type="number" min="1" step="1" required value="'+esc(p?.numero||jobParcels(state.selectedJob.id).length+1)+'"></label><label>Total de parcelas<input name="total_parcelas" type="number" min="1" step="1" required value="'+esc(p?.total_parcelas||1)+'"></label><label>Valor (R$)<input name="valor" type="number" min="0" step="0.01" required value="'+esc(p?.valor??'')+'"></label><label>Vencimento<input name="vencimento" type="date" required value="'+esc(p?.vencimento||'')+'"></label><label>Situação<select name="status"><option value="pendente"'+(paid(p)?'':' selected')+'>Pendente</option><option value="pago"'+(paid(p)?' selected':'')+'>Pago</option></select></label></div><label>Observações<textarea name="observacoes" rows="3" placeholder="Informações desta parcela">'+esc(p?.observacoes||'')+'</textarea></label><div class="pl-finance-form-actions"><button type="submit">Salvar parcela</button><button type="button" id="pl-finance-cancel">Cancelar</button></div><p class="pl-finance-form-message" id="pl-finance-form-message" role="status">'+esc(state.formError)+'</p></form>';
+}
+async function saveInstallment(e){
+ e.preventDefault();
+ const form=e.currentTarget,fd=new FormData(form),button=form.querySelector('[type="submit"]');
+ const number=Number(fd.get('numero')),count=Number(fd.get('total_parcelas')),value=Number(fd.get('valor'));
+ if(!Number.isInteger(number)||number<1||!Number.isInteger(count)||count<1||number>count||!Number.isFinite(value)||value<0){document.getElementById('pl-finance-form-message').textContent='Confira número, total e valor da parcela.';return}
+ const payload={job_id:state.selectedJob.id,numero:number,total_parcelas:count,valor:value,vencimento:String(fd.get('vencimento')),status:String(fd.get('status')),observacoes:String(fd.get('observacoes')||'')};
+ button.disabled=true;button.textContent='Salvando…';
+ const sb=window.plSupabase;
+ const result=state.editingParcel?await sb.from('job_parcelas').update(payload).eq('id',state.editingParcel).select('id').single():await sb.from('job_parcelas').insert(payload).select('id').single();
+ if(result.error){button.disabled=false;button.textContent='Salvar parcela';document.getElementById('pl-finance-form-message').textContent='Não foi possível salvar: '+result.error.message;return}
+ state.editingParcel=null;state.formError='';
+ const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes').in('job_id',state.jobs.map(j=>j.id).filter(Boolean)).order('vencimento',{ascending:true});
+ if(error){document.getElementById('pl-finance-form-message').textContent='Parcela gravada, mas não foi possível atualizar a lista.';return}
+ state.parcels=data||[];renderJob();
 }
 function renderJob(){
  const j=state.selectedJob;if(!j){state.view='overview';renderOverview();return}
- const ps=jobParcels(j.id),open=ps.filter(p=>!paid(p)),total=ps.reduce((s,p)=>s+Number(p.valor||0),0),remaining=open.reduce((s,p)=>s+Number(p.valor||0),0);
- const rows=ps.length?ps.map(p=>{const s=parcelStatus(p);return '<div class="pl-installment'+(s==='pago'?' is-paid':'')+'"><div><strong>'+(p.total_parcelas>1?'Parcela '+esc(p.numero)+'/'+esc(p.total_parcelas):'Recorrente')+'</strong><div class="pl-finance-meta">'+competence(p.vencimento)+'</div></div><div class="nf">Informar NF</div><div><span class="pl-finance-status" data-status="'+s+'">'+label(s)+'</span><div class="pl-finance-meta">'+date(p.vencimento)+'</div></div><strong>'+money(p.valor)+'</strong>'+(p.observacoes?'<div class="pl-installment-note">'+esc(p.observacoes)+'</div>':'')+'</div>'}).join(''):'<div class="pl-finance-empty">Este job ainda não possui parcelas cadastradas.</div>';
- renderShell('<div class="pl-finance-detail-card"><button class="pl-finance-client-link" id="pl-fin-client">'+esc(j.cliente||'Cliente não informado')+' ›</button><h2>'+esc(j.titulo||'Job sem título')+'</h2><div class="pl-finance-meta">'+esc(j.empreendimento||'Sem empreendimento')+'</div><div class="pl-finance-total">'+money(remaining)+' <span class="pl-finance-meta">a receber</span></div><div class="pl-finance-meta">Total previsto: '+money(total||j.valor_acordado)+'</div></div><div class="pl-finance-tabs"><button class="pl-finance-tab is-active">Parcelas e competências</button><button class="pl-finance-tab">Observações</button></div><div>'+rows+'</div>',true);
+ const ps=jobParcels(j.id),open=ps.filter(p=>!paid(p)),total=ps.reduce((sum,p)=>sum+Number(p.valor||0),0),remaining=open.reduce((sum,p)=>sum+Number(p.valor||0),0);
+ const isNotes=state.jobTab==='observacoes';
+ const rows=ps.length?ps.map(p=>{const st=parcelStatus(p);return '<div class="pl-installment'+(st==='pago'?' is-paid':'')+'"><div><strong>'+(p.total_parcelas>1?'Parcela '+esc(p.numero)+'/'+esc(p.total_parcelas):'Recorrente')+'</strong><div class="pl-finance-meta">'+competence(p.vencimento)+'</div></div><div class="nf">Informar NF</div><div><span class="pl-finance-status" data-status="'+st+'">'+label(st)+'</span><div class="pl-finance-meta">'+date(p.vencimento)+'</div></div><strong>'+money(p.valor)+'</strong>'+(p.observacoes?'<div class="pl-installment-note">'+esc(p.observacoes)+'</div>':'')+'<button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar parcela / observações</button></div>'}).join(''):'<div class="pl-finance-empty">Este job ainda não possui parcelas cadastradas.</div>';
+ const noteRows=ps.length?ps.map(p=>'<div class="pl-finance-note-row"><strong>Parcela '+esc(p.numero)+' — '+date(p.vencimento)+'</strong><p>'+esc(p.observacoes||'Sem observações.')+'</p><button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar observações</button></div>').join(''):'<p class="pl-finance-empty">Cadastre uma parcela para incluir observações.</p>';
+ const showForm=state.editingParcel!==null;
+ const editing=state.editingParcel==='new'?null:ps.find(p=>String(p.id)===String(state.editingParcel));
+ renderShell('<div class="pl-finance-detail-card"><button class="pl-finance-client-link" id="pl-fin-client">'+esc(j.cliente||'Cliente não informado')+' ›</button><h2>'+esc(j.titulo||'Job sem título')+'</h2><div class="pl-finance-meta">'+esc(j.empreendimento||'Sem empreendimento')+'</div><div class="pl-finance-total">'+money(remaining)+' <span class="pl-finance-meta">a receber</span></div><div class="pl-finance-meta">Total previsto: '+money(total||j.valor_acordado)+'</div></div><div class="pl-finance-tabs"><button type="button" class="pl-finance-tab'+(!isNotes?' is-active':'')+'" data-fin-tab="parcelas">Parcelas e competências</button><button type="button" class="pl-finance-tab'+(isNotes?' is-active':'')+'" data-fin-tab="observacoes">Observações</button></div><button class="pl-finance-add" id="pl-finance-add" type="button">+ Cadastrar parcela</button>'+(showForm?installmentForm(editing):'')+'<div>'+(isNotes?noteRows:rows)+'</div>',true);
  document.getElementById('pl-fin-client').onclick=()=>{state.selectedClient=j.cliente;state.view='client';render()};
+ root.querySelectorAll('[data-fin-tab]').forEach(b=>b.onclick=()=>{state.jobTab=b.dataset.finTab;state.editingParcel=null;renderJob()});
+ document.getElementById('pl-finance-add').onclick=()=>{state.editingParcel='new';state.formError='';renderJob()};
+ root.querySelectorAll('[data-fin-edit]').forEach(b=>b.onclick=()=>{state.editingParcel=b.dataset.finEdit;state.formError='';renderJob()});
+ if(showForm){document.getElementById('pl-finance-form').onsubmit=saveInstallment;document.getElementById('pl-finance-cancel').onclick=()=>{state.editingParcel=null;renderJob()}}
 }
 function renderClient(){
  const name=state.selectedClient||'Cliente',jobs=state.jobs.filter(j=>j.cliente===state.selectedClient);
