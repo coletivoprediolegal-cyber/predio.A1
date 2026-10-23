@@ -82,7 +82,9 @@ function stats(){
 }
 function row(j){
  const p=nextParcel(j),s=jobStatus(j),isPaid=s==='pago';
- return '<button class="pl-finance-row'+(isPaid?' is-paid':'')+'" data-fin-job="'+esc(j.id)+'"><span><span class="pl-finance-client">'+esc(j.cliente||'Cliente não informado')+'</span><span class="pl-finance-job">'+esc(j.titulo||'Job sem título')+'</span><span class="pl-finance-meta">'+esc(j.empreendimento||'Sem empreendimento')+(p?' · vence '+date(p.vencimento):' · conferir condições')+'</span></span><span class="pl-finance-action"><span class="pl-finance-value">'+money(p?.valor||j.valor_acordado)+'</span><span class="pl-finance-status" data-status="'+s+'">'+(s==='cobrar'?'⚠ ':'')+label(s)+'</span></span><span>›</span></button>';
+ const enterprise=j.empreendimento||j.titulo||'Local não informado';
+ const job=j.empreendimento?(j.titulo||'Job sem título'):'Job sem empreendimento cadastrado';
+ return '<button class="pl-finance-row'+(isPaid?' is-paid':'')+'" data-fin-job="'+esc(j.id)+'"><span><span class="pl-finance-client">'+esc(j.cliente||'Cliente não informado')+'</span><span class="pl-finance-job">'+esc(enterprise)+'</span><span class="pl-finance-meta">'+esc(job)+(p?' · vence '+date(p.vencimento):' · conferir condições')+'</span></span><span class="pl-finance-action"><span class="pl-finance-value">'+money(p?.valor||j.valor_acordado)+'</span><span class="pl-finance-status" data-status="'+s+'">'+(s==='cobrar'?'⚠ ':'')+label(s)+'</span></span><span>›</span></button>';
 }
 function renderOverview(){
  const st=stats(),items=filteredJobs();
