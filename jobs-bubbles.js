@@ -59,6 +59,8 @@ function position(nodes,width){
  return {nodes:placed,height};
 }
 function render(){
+ // Preservar o formulario quando o teclado virtual redimensiona a viewport.
+ if(el.querySelector('#jn-form'))return;
  const visible=items.filter(j=>(filter==='todos'||j.status===filter)&&(categoryFilter==='todas'||(j.category||categoryOf(j.title))===categoryFilter));
  el.innerHTML='<div class="pl-bubble-head"><h1>Jobs</h1><button type="button" id="pl-new-job" class="pl-jobs-create" title="Cadastrar Job">+ Novo Job</button><button type="button" class="pl-bubble-mode" aria-label="Alternar grade e bolhas">'+(mode==='bolhas'?'☷':'◯')+'</button></div>'+(items===sample?'<p class="pl-bubble-demo">Visualização demonstrativa · valores ilustrativos, não são contratos reais</p>':'<p class="pl-bubble-demo">Jobs autorizados · tamanhos ilustrativos onde não há valor cadastrado</p>')+'<div class="pl-bubble-canvas" id="pl-bubble-canvas"></div>'+'<div class="pl-bubble-filters">'+[['todos','Todos'],['ativo','Ativos'],['andamento','Em andamento'],['espera','Em espera'],['concluido','Concluídos'],['inativo','Inativos']].map(([k,v])=>'<button data-filter="'+k+'" class="'+(filter===k?'selected':'')+'">'+v+'</button>').join('')+'</div>'+'<div class="pl-bubble-categories"><label for="pl-jobs-category">Categoria</label><select id="pl-jobs-category" aria-label="Filtrar jobs por categoria">'+categoryOptions.map(([key,label])=>'<option value="'+key+'"'+(categoryFilter===key?' selected':'')+'>'+label+'</option>').join('')+'</select></div>'+'<div class="pl-bubble-detail" id="pl-bubble-detail" hidden></div>';
  el.querySelector('#pl-new-job').onclick=()=>window.PLJobRegistration?.show();
