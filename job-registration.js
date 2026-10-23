@@ -7,11 +7,11 @@ async function show(){
  if(!profile?.ativo||profile.papel!=='administrador')return alert('Somente administradores podem cadastrar Jobs.');
  const [c,e,a]=await Promise.all([sb.from('clientes').select('id,nome').order('nome'),sb.from('empreendimentos').select('id,nome').order('nome'),sb.from('tipos_atividade').select('id,nome').eq('ativo',true).order('nome')]);
  if(c.error||e.error||a.error)return alert('Não foi possível consultar os cadastros.');
- host.hidden=true;
- const panel=document.createElement('section');panel.className='pl-job-new-panel container';host.after(panel);
+ const oldContent=host.innerHTML;
+ const panel=document.createElement('section');panel.className='pl-job-new-panel';host.replaceChildren(panel);
  const options=(rows)=>rows.map(x=>'<option value="'+E(x.id)+'">'+E(x.nome)+'</option>').join('');
  panel.innerHTML='<button id="jn-back" type="button">‹ Voltar aos Jobs</button><h2>Cadastrar Job</h2><form id="jn-form"><label>Cliente<select name="cliente"><option value="">Selecione</option>'+options(c.data)+'</select></label><label>Ou novo cliente<input name="novo_cliente" placeholder="Nome do cliente"></label><label>Empreendimento<select name="emp"><option value="">Selecione</option>'+options(e.data)+'</select></label><label>Ou novo empreendimento<input name="novo_emp" placeholder="Nome do empreendimento"></label><label>Endereço do novo empreendimento<input name="endereco"></label><label>CNPJ do novo empreendimento<input name="cnpj" inputmode="numeric"></label><label>Nome do Job<input name="titulo" required></label><label>Categoria<select name="categoria"><option value="">Não informada</option>'+options(a.data)+'</select></label><h3>Condições comerciais — opcionais</h3><label>Valor fechado (R$)<input name="valor" type="number" min="0" step=".01"></label><label>Quantidade de parcelas<input name="numero" type="number" min="1" max="120" step="1"></label><label>Primeiro vencimento<input name="vencimento" type="date"></label><label>Observações iniciais<textarea name="obs" rows="3"></textarea></label><button type="submit">Salvar Job</button><p id="jn-feedback" role="status"></p></form>';
- const close=()=>{panel.remove();host.hidden=false;window.PLJobsOverview?.show()};
+ const close=()=>{host.innerHTML=oldContent;window.PLJobsOverview?.show()};
  $('#jn-back').onclick=close;
  $('#jn-form').onsubmit=async ev=>{
  ev.preventDefault();const f=ev.currentTarget,d=Object.fromEntries(new FormData(f)),msg=$('#jn-feedback');msg.textContent='Salvando…';
