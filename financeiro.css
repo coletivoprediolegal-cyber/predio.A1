@@ -45,3 +45,9 @@
 .pl-finance-form-message{font-size:11px;color:#a23c36}
 .pl-finance-note-row{border-bottom:1px solid #e4dbce;padding:12px 2px;font-size:12px}
 .pl-finance-note-row p{white-space:pre-wrap;line-height:1.45}
+
+/* Agrupamento visual por cliente, sem alterar os controles financeiros */
+.pl-finance-client-group{padding:0 0 13px;margin:0 0 14px;border-bottom:1px solid #d2c7b7}
+.pl-finance-group-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 4px 8px;margin-top:6px;border-bottom:1px solid #ded6cb;color:var(--navy);font-size:12px;font-weight:700}
+.pl-finance-group-title small{font-size:10px;font-weight:400;color:#8a837a;white-space:nowrap}
+.pl-finance-client-group .pl-finance-row:last-child{border-bottom:0}
