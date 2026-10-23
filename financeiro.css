@@ -30,3 +30,18 @@
  .pl-finance-row{grid-template-columns:minmax(0,1fr) minmax(92px,.52fr) 12px}
  .pl-installment{grid-template-columns:1fr 1fr}.pl-installment-note{grid-column:1/-1}
 }
+
+/* Edição de parcelas e observações */
+.pl-finance-add,.pl-finance-form-actions button:first-child{border:0;border-radius:9px;background:var(--navy);color:#fff;padding:11px 13px;font:600 12px 'Instrument Sans',sans-serif;cursor:pointer}
+.pl-finance-add{margin:1px 0 13px}
+.pl-finance-edit-link{border:0;background:transparent;color:var(--copper);padding:7px 0;font:600 11px 'Instrument Sans',sans-serif;cursor:pointer;text-align:left;grid-column:1/-1}
+.pl-finance-edit{border:1px solid #e2d8ca;border-radius:12px;padding:14px;margin:8px 0 17px;background:#fff7}
+.pl-finance-edit h3{font:400 16px 'Libre Baskerville',Georgia,serif;margin:0 0 12px}
+.pl-finance-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pl-finance-edit label{display:block;font-size:11px;font-weight:600;margin-bottom:11px}
+.pl-finance-edit input,.pl-finance-edit textarea,.pl-finance-edit select{display:block;width:100%;min-width:0;box-sizing:border-box;margin-top:5px;border:1px solid #d5c9ba;border-radius:7px;padding:10px;background:var(--paper);color:var(--navy);font:13px 'Instrument Sans',sans-serif}
+.pl-finance-form-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pl-finance-form-actions button:last-child{border:1px solid #d5c9ba;background:transparent;color:inherit;border-radius:9px;padding:10px;font:600 12px 'Instrument Sans',sans-serif}
+.pl-finance-form-message{font-size:11px;color:#a23c36}
+.pl-finance-note-row{border-bottom:1px solid #e4dbce;padding:12px 2px;font-size:12px}
+.pl-finance-note-row p{white-space:pre-wrap;line-height:1.45}
