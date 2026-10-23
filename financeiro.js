@@ -43,7 +43,7 @@ async function load(){
  state.jobs=Array.isArray(jobs)?jobs:[];
  const ids=state.jobs.map(j=>j.id).filter(Boolean);
  if(ids.length){
-  const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes').in('job_id',ids).order('vencimento',{ascending:true});
+  const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes,competencia').in('job_id',ids).order('vencimento',{ascending:true});
   if(error){renderError('Não foi possível carregar as parcelas.');console.error(error);state.loading=false;return}
   state.parcels=data||[];
  }
@@ -121,7 +121,7 @@ function renderJob(){
  const j=state.selectedJob;if(!j){state.view='overview';renderOverview();return}
  const ps=jobParcels(j.id),open=ps.filter(p=>!paid(p)),total=ps.reduce((sum,p)=>sum+Number(p.valor||0),0),remaining=open.reduce((sum,p)=>sum+Number(p.valor||0),0);
  const isNotes=state.jobTab==='observacoes';
- const rows=ps.length?ps.map(p=>{const st=parcelStatus(p);return '<div class="pl-installment'+(st==='pago'?' is-paid':'')+'"><div><strong>'+(p.total_parcelas>1?'Parcela '+esc(p.numero)+'/'+esc(p.total_parcelas):'Recorrente')+'</strong><div class="pl-finance-meta">'+competence(p.vencimento)+'</div></div><div class="nf">Informar NF</div><div><span class="pl-finance-status" data-status="'+st+'">'+label(st)+'</span><div class="pl-finance-meta">'+date(p.vencimento)+'</div></div><strong>'+money(p.valor)+'</strong>'+(p.observacoes?'<div class="pl-installment-note">'+esc(p.observacoes)+'</div>':'')+'<button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar parcela / observações</button></div>'}).join(''):'<div class="pl-finance-empty">Este job ainda não possui parcelas cadastradas.</div>';
+ const rows=ps.length?ps.map(p=>{const st=parcelStatus(p);return '<div class="pl-installment'+(st==='pago'?' is-paid':'')+'"><div><strong>'+(p.competencia?new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(p.competencia+'T12:00:00')):(p.total_parcelas>1?'Parcela '+esc(p.numero)+'/'+esc(p.total_parcelas):'Pagamento único'))+'</strong><div class="pl-finance-meta">'+competence(p.vencimento)+'</div></div><div class="nf">Informar NF</div><div><span class="pl-finance-status" data-status="'+st+'">'+label(st)+'</span><div class="pl-finance-meta">'+date(p.vencimento)+'</div></div><strong>'+money(p.valor)+'</strong>'+(p.observacoes?'<div class="pl-installment-note">'+esc(p.observacoes)+'</div>':'')+'<button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar parcela / observações</button></div>'}).join(''):'<div class="pl-finance-empty">Este job ainda não possui parcelas cadastradas.</div>';
  const noteRows=ps.length?ps.map(p=>'<div class="pl-finance-note-row"><strong>Parcela '+esc(p.numero)+' — '+date(p.vencimento)+'</strong><p>'+esc(p.observacoes||'Sem observações.')+'</p><button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar observações</button></div>').join(''):'<p class="pl-finance-empty">Cadastre uma parcela para incluir observações.</p>';
  const showForm=state.editingParcel!==null;
  const editing=state.editingParcel==='new'?null:ps.find(p=>String(p.id)===String(state.editingParcel));
