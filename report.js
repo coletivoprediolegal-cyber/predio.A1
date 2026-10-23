@@ -450,29 +450,10 @@
    const ref=state.album.data_vistoria?new Date(state.album.data_vistoria+'T12:00:00').toLocaleDateString('pt-BR'):'';
    const sectionNames=[...new Set(p.items.map(i=>i.secao_nome).filter(Boolean))];
    const compactSlashes=text=>String(text||'').replace(/\s*\/\s*/g,'/').trim();
-   const compactObservation=text=>{
-    let value=compactSlashes(String(text||'')
-     .replace(/^Referências do registro:\s*/i,'')
-     .replace(/\s*\(conforme registro\)\s*/gi,'')
-     .replace(/(?:;\s*)?Registro original da manifestação:.*$/i,'')
-     .replace(/\s*;\s*/g,'; ')
-     .replace(/;\s*$/,'').trim());
-    if(!value)return '';
-    const parts=[...new Set(value.split(';').map(v=>v.trim()).filter(Boolean))];
-    // Referências de registro são contexto secundário: no relatório basta uma identificação curta.
-    const concise=[];
-    for(const part of parts){
-     const normalized=part.toLocaleLowerCase('pt-BR');
-     if(concise.some(v=>v.toLocaleLowerCase('pt-BR')===normalized))continue;
-     concise.push(part);
-     if(concise.length===2)break;
-    }
-    value=concise.join('; ');
-    return value.length>55?value.slice(0,52).replace(/[\s;,]+$/,'')+'…':value;
-   };
+   const fullObservation=text=>String(text||'').trim();
    const cells=p.items.map(i=>{
     const anomaly=i.source.nivel_anomalia;
-    const note=compactObservation(i.legenda||'');
+    const note=fullObservation(i.legenda||'');
     // A seção aparece apenas no cabeçalho; cada manifestação tem sua própria linha.
      const meta=i.source.metadados||{};
      const raw=i.manifestacao_observada||meta.manifestacoes_observadas||meta.manifestacoes||meta.manifestacao_observada||i.source.manifestacoes_observadas||i.source.manifestacao_observada||[];
