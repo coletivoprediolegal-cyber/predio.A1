@@ -34,5 +34,18 @@ async function load(id,box){
  const authors=new Map((people||[]).map(p=>[p.usuario_id,p.papel]));
  list.innerHTML=(data||[]).map(x=>'<article data-feed-item data-tipo="'+escapeHTML(x.tipo)+'"><div class="pl-feed-meta"><b>'+escapeHTML(labels[x.tipo]||x.tipo)+'</b> · '+escapeHTML(x.visibilidade)+' · '+escapeHTML(when(x.criado_em))+' · '+escapeHTML(authors.get(x.autor_id)||'Usuário')+' <small>'+escapeHTML(x.autor_id.slice(0,8))+'</small></div><p>'+escapeHTML(x.conteudo)+'</p>'+(x.prazo?'<small>Prazo: '+escapeHTML(x.prazo)+'</small>':'')+'</article>').join('')||'<p>Nenhum registro neste Job.</p>';
 }
-window.PLJobFeed={mount};
+function attach(jobId){
+ const host=document.querySelector('#pl-job-content');if(!host)return;
+ let timer;
+ const observer=new MutationObserver(()=>{
+  clearTimeout(timer);
+  timer=setTimeout(()=>{
+   if(!document.querySelector('#pl-job')?.classList.contains('active')&&!document.querySelector('#pl-job')?.classList.contains('visible'))return;
+   if(!host.querySelector('#pl-job-feed')&&!host.querySelector('.pl-empty')&&host.children.length){observer.disconnect();mount(jobId)}
+  },120);
+ });
+ observer.observe(host,{childList:true});
+ setTimeout(()=>{if(!host.querySelector('#pl-job-feed')&&!host.querySelector('.pl-empty')&&host.children.length){observer.disconnect();mount(jobId)}},400);
+}
+window.PLJobFeed={mount,attach};
 })();
