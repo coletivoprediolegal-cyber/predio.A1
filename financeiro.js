@@ -34,7 +34,7 @@ async function load(){
  if(!sessionData?.session){renderAccess();state.loading=false;return}
  const [{data:jobs,error:je},{data:profile,error:pe}]=await Promise.all([
   sb.rpc('pl_meus_jobs'),
-  sb.from('perfis_acesso').select('pode_ver_financeiro,ativo').eq('id',sessionData.session.user.id).maybeSingle()
+  sb.from('perfis_acesso').select('pode_ver_financeiro,ativo').eq('usuario_id',sessionData.session.user.id).maybeSingle()
  ]);
  if(je||pe||!profile?.ativo||!profile?.pode_ver_financeiro){
   renderAccess(profile?.ativo?'Seu perfil ainda não tem acesso ao financeiro.':'Entre com um perfil autorizado para ver o financeiro.');
