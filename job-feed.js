@@ -35,7 +35,7 @@ async function load(id,box){
  const ids=[...new Set((data||[]).map(x=>x.autor_id).filter(Boolean))];
  const {data:people}=ids.length?await sb.from('perfis_acesso').select('usuario_id,papel').in('usuario_id',ids):{data:[]};
  const authors=new Map((people||[]).map(p=>[p.usuario_id,p.papel]));
- list.innerHTML=(data||[]).map(x=>'<article data-feed-item data-tipo="'+escapeHTML(x.tipo)+'"><div class="pl-feed-meta"><b>'+escapeHTML(labels[x.tipo]||x.tipo) +'</b> · '+escapeHTML(x.visibilidade)+' · '+escapeHTML(when(x.criado_em))+' · '+escapeHTML(authors.get(x.autor_id)||'Usuário')+' <small>'+escapeHTML((x.autor_id||'').slice(0,8))+'</small></div><p>'+escapeHTML(x.conteudo)+'</p>'+(x.prazo?'<small>Prazo: '+escapeHTML(x.prazo)+'</small>':'')+'</article>').join('')||'<p>Nenhum registro neste Job.</p>';applyFilter(box);
+ list.innerHTML=(data||[]).map(x=>'<article data-feed-item data-tipo="'+escapeHTML(x.tipo)+'" data-resolvido="'+String(!!x.resolvido)+'" data-assunto="'+escapeHTML(x.assunto_id||'')+'"><div class="pl-feed-meta"><b>'+escapeHTML(labels[x.tipo]||x.tipo) +'</b> · '+escapeHTML(x.visibilidade)+' · '+escapeHTML(when(x.criado_em))+' · '+escapeHTML(authors.get(x.autor_id)||'Usuário')+' <small>'+escapeHTML((x.autor_id||'').slice(0,8))+'</small></div><p>'+escapeHTML(x.conteudo)+'</p>'+(x.prazo?'<small>Prazo: '+escapeHTML(x.prazo)+'</small>':'')+'</article>').join('')||'<p>Nenhum registro neste Job.</p>';applyFilter(box);
 }
 function attach(jobId){
  const host=document.querySelector('#pl-job-content');if(!host)return;
