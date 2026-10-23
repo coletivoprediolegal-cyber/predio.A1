@@ -59,6 +59,8 @@ function position(nodes,width){
  return {nodes:placed,height};
 }
 function render(){
+ // Preserve o formulário durante mudanças de viewport no Android (rolagem/teclado).
+ if(el.querySelector('.pl-job-new-panel'))return;
  // Preservar o formulario quando o teclado virtual redimensiona a viewport.
  if(el.querySelector('#jn-form'))return;
  const visible=items.filter(j=>(filter==='todos'||j.status===filter)&&(categoryFilter==='todas'||(j.category||categoryOf(j.title))===categoryFilter));
@@ -74,7 +76,7 @@ function render(){
  canvas.querySelectorAll('[data-job]').forEach(b=>b.onclick=()=>{const j=visible.find(x=>String(x.id)===b.dataset.job);if(!j)return;const detail=el.querySelector('#pl-bubble-detail');detail.hidden=false;detail.innerHTML='<button class="pl-bubble-close" aria-label="Fechar">×</button><strong>'+escape(j.title)+'</strong><p>'+escape(j.client||j.enterprise||'')+'</p><p>'+labels[j.status]+' · '+money(j.value)+'</p>'+(j.demo?'<small>Dados ilustrativos</small>':'<button class="pl-bubble-open">Abrir pasta do job ›</button>');detail.querySelector('.pl-bubble-close').onclick=()=>detail.hidden=true;const open=detail.querySelector('.pl-bubble-open');if(open)open.onclick=()=>window.PLJobsOverview?.openJob?.(j.id);detail.scrollIntoView({block:'nearest',behavior:'smooth'})});
 }
 function bubble(j,i){return '<button class="pl-job-bubble pl-grid-bubble '+(j.status==='inativo'?'is-inactive':'')+'" data-job="'+escape(j.id)+'" style="--bubble:'+j.color+'"><strong>'+escape(j.title)+'</strong><small>'+money(j.value)+'</small></button>'}
-let resizeTimer;window.addEventListener('resize',()=>{if(el.offsetParent===null)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(render,180)});
+let resizeTimer;window.addEventListener('resize',()=>{if(el.offsetParent===null||el.querySelector('.pl-job-new-panel'))return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(!el.querySelector('.pl-job-new-panel'))render()},180)});
 window.PLJobsOverview={show(){render()},setJobs(rows){if(Array.isArray(rows)&&rows.length){items=realJobs(rows);render()}},openJob:null};
 render();
 })();
