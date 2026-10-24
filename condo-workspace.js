@@ -31,6 +31,12 @@ function itemRow(m){
  const amount=workspace.albuns.filter(a=>a.mini_job_id===m.id).length;
  return '<button class="cw-mini" data-detail="'+esc(m.id)+'"><div class="cw-mini-main"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><strong>'+esc(m.titulo)+'</strong><small>'+esc(m.area==='privativa'?labelLocal(m.local_id):'Área comum')+(amount?' · '+amount+' álbum(ns)':'')+'</small></div><span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span><span class="cw-chevron">›</span></button>';
 }
+function subjectStrip(){
+ const items=mini().filter(m=>m.area===state.area).sort((a,b)=>Number(b.status==='em_andamento')-Number(a.status==='em_andamento')||sorted(a.titulo,b.titulo));
+ if(!items.length)return '';
+ return '<section class="cw-subject-strip" aria-label="Acesso rápido aos assuntos"><div class="cw-subject-strip-head"><h2>Assuntos</h2><button type="button" data-subject-search-toggle aria-label="Buscar assunto">⌕ Buscar</button></div><input class="cw-subject-search" data-subject-search type="search" placeholder="Localizar assunto…" aria-label="Localizar assunto" hidden><div class="cw-subject-rail" role="group" aria-label="Assuntos; deslize lateralmente">'+
+ '<button class="cw-subject-pill cw-subject-all" type="button" data-subject-all>Todos</button>'+items.map(m=>'<button type="button" class="cw-subject-pill" data-detail="'+esc(m.id)+'" data-subject-title="'+esc(m.titulo.toLocaleLowerCase('pt-BR'))+'">'+esc(m.titulo)+(m.status==='em_andamento'?'<span class="cw-subject-dot" aria-label="Em andamento"></span>':'')+'</button>').join('')+'</div></section>';
+}
 function filterBar(){
  return '<div class="cw-filters" aria-label="Filtrar por andamento">'+[['todos','Todos'],['em_andamento','Em andamento'],['planejado','Planejados'],['concluido','Concluídos'],['suspenso','Suspensos']].map(p=>'<button data-filter="'+p[0]+'" class="'+(state.filter===p[0]?'selected':'')+'">'+p[1]+'</button>').join('')+'</div>';
 }
@@ -92,7 +98,7 @@ function detail(){
 function render(){
  if(!root)return;
  const heading='<div class="cw-jobhead"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' / JOB</div><h1>'+esc(job.titulo)+'</h1><p>Consultoria e monitoramento predial mensal</p></div>';
- root.innerHTML='<div class="cw-app">'+heading+breadcrumb()+(errorText?'<p class="cw-error" role="alert">'+esc(errorText)+'</p>':'')+(state.detail?detail():!state.area?overview():state.area==='comum'?common():privativa())+'</div>';
+ root.innerHTML='<div class="cw-app">'+heading+breadcrumb()+(errorText?'<p class="cw-error" role="alert">'+esc(errorText)+'</p>':'')+(state.detail?detail():!state.area?overview():subjectStrip()+(state.area==='comum'?common():privativa()))+'</div>';
  bind();
  if(state.detail&&window.PLMiniHistory)window.PLMiniHistory.mount(root,job.id,state.detail,isAdmin).catch(e=>console.warn('Histórico do assunto',e));
 }
@@ -123,6 +129,14 @@ function bind(){
  root.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{state.subject=b.dataset.subject||null;state.form=false;render()});
  root.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{state.filter=b.dataset.filter;render()});
  root.querySelectorAll('[data-detail]').forEach(b=>b.onclick=()=>{state.detail=b.dataset.detail;state.form=false;render()});
+ const searchToggle=root.querySelector('[data-subject-search-toggle]');
+ const searchField=root.querySelector('[data-subject-search]');
+ if(searchToggle&&searchField){
+  searchToggle.onclick=()=>{searchField.hidden=!searchField.hidden;if(!searchField.hidden)searchField.focus();else{searchField.value='';searchField.dispatchEvent(new Event('input'))}};
+  searchField.oninput=()=>{const q=searchField.value.trim().toLocaleLowerCase('pt-BR');root.querySelectorAll('.cw-subject-rail [data-subject-title]').forEach(b=>{b.hidden=!b.dataset.subjectTitle.includes(q)});};
+ }
+ root.querySelector('[data-subject-all]')?.addEventListener('click',()=>{state.subject=null;state.filter='todos';render()});
+
  root.querySelector('[data-action="add"]')?.addEventListener('click',()=>{state.form=!state.form;render();root.querySelector('[name="titulo"]')?.focus()});
  root.querySelector('[data-action="cancel-form"]')?.addEventListener('click',()=>{state.form=false;render()});
  root.querySelector('#cw-unit-search')?.addEventListener('input',e=>{state.search=e.target.value;const start=e.target.selectionStart;render();const inp=root.querySelector('#cw-unit-search');inp?.focus();inp?.setSelectionRange(start,start)});
