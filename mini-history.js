@@ -7,7 +7,7 @@ async function mount(root,jobId,miniId,canWrite){
  const node=root.querySelector('#cw-mini-history');
  if(!node)return;
  const token=++sequence, sb=window.plSupabase;
- let page=0,filter='todos',query='',busy=false,allDone=false;
+ let page=0,filter='todos',query='',busy=false,allDone=false,requestVersion=0;
  node.innerHTML='<h3>Histórico do assunto</h3><p class="cw-history-explain">Atualizações e decisões deste assunto, vinculadas ao Job principal.</p>'+
  '<input type="search" class="cw-history-search" aria-label="Pesquisar no histórico" placeholder="Buscar em todo o histórico…">'+
  '<div class="cw-history-toolbar">'+[['todos','Todos'],['pendencia','Pendências'],['decisao','Decisões'],['comentario','Atualizações']].map(([v,n])=>'<button type="button" data-history-filter="'+v+'" aria-pressed="'+String(v==='todos')+'">'+n+'</button>').join('')+'</div>'+
@@ -16,15 +16,15 @@ async function mount(root,jobId,miniId,canWrite){
  const list=node.querySelector('.cw-history-list'),more=node.querySelector('.cw-history-more');
  async function fetchPage(reset=false){
   if(busy||token!==sequence)return;
-  if(reset){page=0;allDone=false;list.innerHTML='';}
+  if(reset){requestVersion++;page=0;allDone=false;busy=false;list.innerHTML='';}
   if(allDone)return;
-  busy=true;more.disabled=true;more.hidden=true;
+  busy=true;const thisRequest=requestVersion;more.disabled=true;more.hidden=true;
   let req=sb.from('job_feed').select('id,conteudo,criado_em,autor_id,tipo,visibilidade,resolvido,prazo').eq('job_id',jobId).eq('mini_job_id',miniId);
   if(filter!=='todos')req=req.eq('tipo',filter);
   if(query)req=req.ilike('conteudo','%'+query.replace(/[%_]/g,'\\$&')+'%');
   const {data,error}=await req.order('criado_em',{ascending:false}).order('id',{ascending:false}).range(page*20,page*20+19);
   busy=false;
-  if(token!==sequence||!node.isConnected||node.dataset.mini!==miniId)return;
+  if(token!==sequence||thisRequest!==requestVersion||!node.isConnected||node.dataset.mini!==miniId)return;
   if(error){list.insertAdjacentHTML('beforeend','<p class="cw-error">'+esc(error.message)+'</p>');more.hidden=false;more.disabled=false;return;}
   if(!data?.length&&page===0)list.innerHTML='<p class="cw-empty">Nenhum registro encontrado neste filtro.</p>';
   if(data?.length){list.insertAdjacentHTML('beforeend',data.map(x=>'<article class="cw-history-entry"><small>'+esc(date(x.criado_em))+' · '+esc(x.tipo==='decisao'?'Decisão confirmada':x.tipo==='pendencia'?'Pendência':'Atualização')+' · '+esc(x.visibilidade==='interno'?'Interno':'Geral')+' · '+esc(x.autor_id?.slice(0,8)||'Autor não identificado')+'</small><p>'+esc(x.conteudo)+'</p>'+(x.prazo?'<small>Prazo: '+esc(x.prazo)+'</small>':'')+'</article>').join(''));page++;}
@@ -37,7 +37,7 @@ async function mount(root,jobId,miniId,canWrite){
  node.querySelector('.cw-history-search').oninput=e=>{
   const version=++searchVersion,next=e.target.value.trim();
   // A busca é executada no servidor, nunca apenas nos 20 registros visíveis.
-  Promise.resolve().then(()=>{if(version!==searchVersion)return;query=next;busy=false;fetchPage(true)});
+  Promise.resolve().then(()=>{if(version!==searchVersion)return;query=next;fetchPage(true)});
  };
  const f=node.querySelector('#cw-history-form');
  if(f)f.onsubmit=async e=>{
