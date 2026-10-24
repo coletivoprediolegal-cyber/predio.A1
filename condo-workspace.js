@@ -24,7 +24,7 @@ function breadcrumb(){
  }
  if(state.unit)nodes.push([labelLocal(state.unit),'unit']);
  if(state.subject)nodes.push([state.subject,'subject']);
- if(state.detail)nodes.push(['Mini-job','detail']);
+ if(state.detail)nodes.push(['Assunto','detail']);
  return '<div class="cw-crumb">'+nodes.map((n,i)=>i===nodes.length-1?'<span>'+esc(n[0])+'</span>':'<button data-crumb="'+esc(n[1])+'">'+esc(n[0])+'</button><span aria-hidden="true">›</span>').join('')+'</div>';
 }
 function itemRow(m){
@@ -39,13 +39,13 @@ function form(){
   ?'<label>Unidade<select name="local_id" required><option value="">Selecione o apartamento</option>'+locais().filter(l=>l.numero).sort((a,b)=>sorted(a.bloco+a.numero,b.bloco+b.numero)).map(l=>'<option value="'+esc(l.id)+'">Torre '+esc(l.bloco)+' · Apto '+esc(l.numero)+'</option>').join('')+'</select></label>'
   :'';
  const suggested=state.area==='comum'?['Fachadas','Pintura e padronização','Playground','Instalações','Manutenção predial']:['Obras privativas','Vistorias de unidades','Manifestações patológicas','Consultas técnicas'];
- return '<form id="cw-form" class="cw-form"><div class="cw-form-title">Novo mini-job</div><label>Título<input name="titulo" maxlength="180" required placeholder="Ex.: Verificação da reforma" autocomplete="off"></label><label>Assunto<input name="assunto" list="cw-subjects" maxlength="120" required value="'+esc(state.subject|| (state.area==='privativa'?'Obras privativas':''))+'" placeholder="Ex.: Obras privativas"><datalist id="cw-subjects">'+[...new Set([...suggested,...subjects()])].map(s=>'<option value="'+esc(s)+'"></option>').join('')+'</datalist></label>'+options+'<label>Status<select name="status"><option value="em_andamento">Em andamento</option><option value="planejado">Planejado</option><option value="concluido">Concluído</option><option value="suspenso">Suspenso</option></select></label><label>Observações<textarea name="descricao" rows="2" placeholder="Opcional"></textarea></label><div class="cw-form-actions"><button type="button" data-action="cancel-form">Cancelar</button><button type="submit" '+(busy?'disabled':'')+'>Salvar mini-job</button></div></form>';
+ return '<form id="cw-form" class="cw-form"><div class="cw-form-title">Novo assunto</div><label>Título<input name="titulo" maxlength="180" required placeholder="Ex.: Verificação da reforma" autocomplete="off"></label><label>Assunto<input name="assunto" list="cw-subjects" maxlength="120" required value="'+esc(state.subject|| (state.area==='privativa'?'Obras privativas':''))+'" placeholder="Ex.: Obras privativas"><datalist id="cw-subjects">'+[...new Set([...suggested,...subjects()])].map(s=>'<option value="'+esc(s)+'"></option>').join('')+'</datalist></label>'+options+'<label>Status<select name="status"><option value="em_andamento">Em andamento</option><option value="planejado">Planejado</option><option value="concluido">Concluído</option><option value="suspenso">Suspenso</option></select></label><label>Observações<textarea name="descricao" rows="2" placeholder="Opcional"></textarea></label><div class="cw-form-actions"><button type="button" data-action="cancel-form">Cancelar</button><button type="submit" '+(busy?'disabled':'')+'>Salvar assunto</button></div></form>';
 }
 function addButton(){
- return isAdmin?'<button class="cw-add" data-action="add">＋ Novo mini-job</button>':'';
+ return isAdmin?'<button class="cw-add" data-action="add">＋ Novo assunto</button>':'';
 }
 function list(items,showAdd=true){
- return (showAdd?'<div class="cw-list-actions"><span>'+items.length+' mini-job(s)</span>'+addButton()+'</div>':'')+(items.length?'<div class="cw-mini-list">'+items.map(itemRow).join('')+'</div>':'<p class="cw-empty">Nenhum mini-job nesta seleção.</p>')+(state.form?form():'');
+ return (showAdd?'<div class="cw-list-actions"><span>'+items.length+' assunto(s)</span>'+addButton()+'</div>':'')+(items.length?'<div class="cw-mini-list">'+items.map(itemRow).join('')+'</div>':'<p class="cw-empty">Nenhum assunto nesta seleção.</p>')+(state.form?form():'');
 }
 function unitView(){
  const u=selectedUnit();if(!u){state.unit=null;return '<p class="cw-empty">Unidade não encontrada.</p>'}
@@ -55,28 +55,28 @@ function towerView(){
  const t=towers().find(x=>x.id===state.tower);if(!t)return '<p class="cw-empty">Torre não encontrada.</p>';
  const q=state.search.toLocaleLowerCase('pt-BR');
  const rows=units(t.id).filter(u=>(u.numero||'').toLowerCase().includes(q));
- return '<div class="cw-subheading"><h2>Torre '+esc(t.bloco)+'</h2><span>'+units(t.id).length+' apartamentos</span></div><input class="cw-quick-search" id="cw-unit-search" aria-label="Buscar apartamento" placeholder="Buscar apartamento..." value="'+esc(state.search)+'"><div class="cw-unit-grid">'+rows.map(u=>'<button data-unit="'+esc(u.id)+'"><strong>'+esc(u.numero)+'</strong><small>'+mini().filter(m=>m.local_id===u.id).length+' mini-job(s)</small></button>').join('')+'</div>';
+ return '<div class="cw-subheading"><h2>Torre '+esc(t.bloco)+'</h2><span>'+units(t.id).length+' apartamentos</span></div><input class="cw-quick-search" id="cw-unit-search" aria-label="Buscar apartamento" placeholder="Buscar apartamento..." value="'+esc(state.search)+'"><div class="cw-unit-grid">'+rows.map(u=>'<button data-unit="'+esc(u.id)+'"><strong>'+esc(u.numero)+'</strong><small>'+mini().filter(m=>m.local_id===u.id).length+' assunto(s)</small></button>').join('')+'</div>';
 }
 function privativa(){
- const tabs='<div class="cw-tabs" role="tablist" aria-label="Forma de consulta"><button role="tab" aria-selected="'+(state.tab==='apartamento')+'" data-tab="apartamento">Por apartamento</button><button role="tab" aria-selected="'+(state.tab==='assunto')+'" data-tab="assunto">Por assunto</button></div>';
+ const tabs='<div class="cw-tabs" role="tablist" aria-label="Forma de consulta"><button role="tab" aria-selected="'+(state.tab==='apartamento')+'" data-tab="apartamento">Por apartamento</button><button role="tab" aria-selected="'+(state.tab==='assunto')+'" data-tab="assunto">Por tópico</button></div>';
  if(state.tab==='apartamento'){
   if(state.unit)return tabs+unitView();
   if(state.tower)return tabs+towerView();
   const filtered=mini().filter(m=>m.area==='privativa');
   return tabs+'<h2 class="cw-section-label">Selecione a torre</h2><div class="cw-towers">'+towers().map(t=>{
    const count=filtered.filter(m=>units(t.id).some(u=>u.id===m.local_id)).length;
-   return '<button data-tower="'+esc(t.id)+'"><strong>'+esc(t.bloco||t.nome)+'</strong><small>'+units(t.id).length+' aptos · '+count+' mini-jobs</small></button>';
+   return '<button data-tower="'+esc(t.id)+'"><strong>'+esc(t.bloco||t.nome)+'</strong><small>'+units(t.id).length+' aptos · '+count+' assuntos</small></button>';
   }).join('')+'</div><p class="cw-hint">Selecione a torre e depois o apartamento para consultar todas as intervenções da unidade.</p>';
  }
- return tabs+'<h2 class="cw-section-label">Consultar por assunto</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos os assuntos</button>'+subjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')+'</div>'+filterBar()+list(currentItems());
+ return tabs+'<h2 class="cw-section-label">Consultar por tópico</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos os tópicos</button>'+subjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')+'</div>'+filterBar()+list(currentItems());
 }
 function common(){
- return '<h2 class="cw-section-label">Áreas comuns · assuntos</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos</button>'+subjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')+'</div>'+filterBar()+list(currentItems());
+ return '<h2 class="cw-section-label">Áreas comuns · tópicos</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos</button>'+subjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')+'</div>'+filterBar()+list(currentItems());
 }
 function overview(){
  const active=mini().filter(m=>m.status==='em_andamento'&&!m.demonstracao).length;
  const examples=mini().filter(m=>m.demonstracao).length;
- return '<div class="cw-overview"><p class="cw-info">Um único job mensal, organizado em assuntos e locais. Consulte os mesmos mini-jobs por apartamento ou por tema, sem duplicar registros.</p><div class="cw-choices"><button data-area="comum"><span class="cw-choice-icon">⌂</span><strong>Áreas comuns</strong><small>Fachadas, manutenção, playground e outros assuntos</small><span class="cw-arrow">›</span></button><button data-area="privativa"><span class="cw-choice-icon">▦</span><strong>Áreas privativas</strong><small>Torres, apartamentos e obras privativas</small><span class="cw-arrow">›</span></button></div><p class="cw-hint">'+active+' mini-job(s) reais em andamento'+(examples?' · '+examples+' registros ilustrativos identificados como EXEMPLO':'')+'</p></div>';
+ return '<div class="cw-overview"><p class="cw-info">Um único Job mensal, organizado em assuntos e locais. Consulte os mesmos assuntos por apartamento ou por tópico, sem duplicar registros.</p><div class="cw-choices"><button data-area="comum"><span class="cw-choice-icon">⌂</span><strong>Áreas comuns</strong><small>Fachadas, manutenção, playground e outros assuntos</small><span class="cw-arrow">›</span></button><button data-area="privativa"><span class="cw-choice-icon">▦</span><strong>Áreas privativas</strong><small>Torres, apartamentos e obras privativas</small><span class="cw-arrow">›</span></button></div><p class="cw-hint">'+active+' assunto(s) reais em andamento'+(examples?' · '+examples+' registros ilustrativos identificados como EXEMPLO':'')+'</p></div>';
 }
 function detail(){
  const m=mini().find(x=>x.id===state.detail);if(!m)return '<p class="cw-empty">Mini-job não encontrado.</p>';
@@ -94,7 +94,7 @@ function render(){
  const heading='<div class="cw-jobhead"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' / JOB</div><h1>'+esc(job.titulo)+'</h1><p>Consultoria e monitoramento predial mensal</p></div>';
  root.innerHTML='<div class="cw-app">'+heading+breadcrumb()+(errorText?'<p class="cw-error" role="alert">'+esc(errorText)+'</p>':'')+(state.detail?detail():!state.area?overview():state.area==='comum'?common():privativa())+'</div>';
  bind();
- if(state.detail&&window.PLMiniHistory)window.PLMiniHistory.mount(root,job.id,state.detail,isAdmin).catch(e=>console.warn('Histórico do mini-job',e));
+ if(state.detail&&window.PLMiniHistory)window.PLMiniHistory.mount(root,job.id,state.detail,isAdmin).catch(e=>console.warn('Histórico do assunto',e));
 }
 async function reload(){
  const {data,error}=await sb().rpc('pl_condo_workspace_data',{p_job_id:job.id});
@@ -162,7 +162,7 @@ function bind(){
 window.PLCondoWorkspace={
  async mount(node,currentJob){
   root=node;job=currentJob;errorText='';isAdmin=false;Object.assign(state,{area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:''});
-  node.innerHTML='<p class="pl-empty">Carregando áreas, torres e mini-jobs…</p>';
+  node.innerHTML='<p class="pl-empty">Carregando áreas, torres e assuntos…</p>';
   try{const profile=await sb().rpc('pl_meu_perfil');isAdmin=!profile.error&&profile.data?.ativo&&profile.data?.papel==='administrador';await reload()}catch(e){node.innerHTML='<p class="pl-error">Não foi possível abrir o monitoramento: '+esc(e.message)+'</p>'}
  }
 };
