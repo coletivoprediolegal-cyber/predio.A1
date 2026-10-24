@@ -15,7 +15,7 @@ async function mount(root,jobId,miniId,canWrite){
  (canWrite?'<form id="cw-history-form"><label>Nova atualização<textarea name="conteudo" rows="3" required maxlength="5000" placeholder="Ex.: Em reunião, definida a cor da fachada…"></textarea></label><div class="cw-history-controls"><label>Tipo<select name="tipo"><option value="comentario">Atualização</option><option value="decisao">Decisão confirmada</option><option value="pendencia">Pendência</option></select></label><label>Visibilidade<select name="visibilidade"><option value="geral" selected>Geral</option><option value="interno">Interno</option></select></label></div><button class="cw-save" type="submit">Registrar atualização</button><p role="status"></p></form>':'');
  const list=node.querySelector('.cw-history-list'),more=node.querySelector('.cw-history-more');
  async function fetchPage(reset=false){
-  if(busy||token!==sequence)return;
+  if(token!==sequence||(busy&&!reset))return;
   if(reset){requestVersion++;page=0;allDone=false;busy=false;list.innerHTML='';}
   if(allDone)return;
   busy=true;const thisRequest=requestVersion;more.disabled=true;more.hidden=true;
