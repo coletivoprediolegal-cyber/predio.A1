@@ -51,3 +51,5 @@
 .pl-finance-group-title{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 4px 8px;margin-top:6px;border-bottom:1px solid #ded6cb;color:var(--navy);font-size:12px;font-weight:700}
 .pl-finance-group-title small{font-size:10px;font-weight:400;color:#8a837a;white-space:nowrap}
 .pl-finance-client-group .pl-finance-row:last-child{border-bottom:0}
+
+.pl-installment .nf{border:0;background:transparent;color:#8a8278;font:500 12px 'Instrument Sans',Arial,sans-serif;padding:4px 0;text-align:left;cursor:pointer}.pl-installment .nf.has-nf{color:#263b60}.pl-installment-title{min-width:0}.pl-finance-fields label small{display:block;margin-top:4px;color:#918b82;font-size:10px}
