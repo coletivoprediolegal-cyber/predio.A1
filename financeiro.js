@@ -26,6 +26,12 @@ function nextParcel(job){
 }
 function jobStatus(job){return parcelStatus(nextParcel(job))}
 function label(s){return ({resumo:'Resumo',apurar:'Apurar',emitir:'Emitir',cobrar:'Cobrar',receber:'Receber',conferir:'Conferir',pago:'Pago',todos:'Todos'})[s]||s}
+function recurring(j){return j?.modalidade_cobranca==='recorrente'}
+function parcelTitle(p,j){
+ if(recurring(j)){const ref=p.competencia||p.vencimento;return ref?new Intl.DateTimeFormat('pt-BR',{month:'short',year:'2-digit'}).format(new Date(ref+'T12:00:00')).replace('.','').toUpperCase():'COMPETÊNCIA A DEFINIR'}
+ if(j?.modalidade_cobranca==='unico')return 'Pagamento único';
+ return 'Parcela '+p.numero+'/'+p.total_parcelas;
+}
 async function load(){
  if(state.loading)return;state.loading=true;renderLoading();
  const sb=window.plSupabase;
@@ -43,7 +49,7 @@ async function load(){
  state.jobs=Array.isArray(jobs)?jobs:[];
  const ids=state.jobs.map(j=>j.id).filter(Boolean);
  if(ids.length){
-  const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes,competencia').in('job_id',ids).order('vencimento',{ascending:true});
+  const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes,competencia,descricao_contratual,numero_nf,data_emissao_nf,data_cobranca,data_pagamento').in('job_id',ids).order('vencimento',{ascending:true});
   if(error){renderError('Não foi possível carregar as parcelas.');console.error(error);state.loading=false;return}
   state.parcels=data||[];
  }
@@ -99,33 +105,44 @@ function renderOverview(){
  root.querySelectorAll('[data-fin-job]').forEach(b=>b.onclick=()=>{state.scroll=window.scrollY;state.selectedJob=state.jobs.find(j=>j.id===b.dataset.finJob);state.view='job';state.jobTab='parcelas';state.editingParcel=null;render()});
 }
 function installmentForm(p){
- const edit=!!p;
- return '<form id="pl-finance-form" class="pl-finance-edit"><h3>'+(edit?'Editar parcela':'Nova parcela')+'</h3><div class="pl-finance-fields"><label>Número da parcela<input name="numero" type="number" min="1" step="1" required value="'+esc(p?.numero||jobParcels(state.selectedJob.id).length+1)+'"></label><label>Total de parcelas<input name="total_parcelas" type="number" min="1" step="1" required value="'+esc(p?.total_parcelas||1)+'"></label><label>Valor (R$)<input name="valor" type="number" min="0" step="0.01" required value="'+esc(p?.valor??'')+'"></label><label>Vencimento<input name="vencimento" type="date" required value="'+esc(p?.vencimento||'')+'"></label><label>Situação<select name="status"><option value="pendente"'+(paid(p)?'':' selected')+'>Pendente</option><option value="pago"'+(paid(p)?' selected':'')+'>Pago</option></select></label></div><label>Condição original da parcela<input name="descricao_contratual" maxlength="240" placeholder="Ex.: entrega do parecer" value="'+esc(p?.descricao_contratual||'')+'"></label><label>Observações financeiras<textarea name="observacoes" rows="3" placeholder="Informações desta parcela">'+esc(p?.observacoes||'')+'</textarea></label><div class="pl-finance-form-actions"><button type="submit">Salvar parcela</button><button type="button" id="pl-finance-cancel">Cancelar</button></div><p class="pl-finance-form-message" id="pl-finance-form-message" role="status">'+esc(state.formError)+'</p></form>';
+ const j=state.selectedJob,ps=jobParcels(j.id),edit=!!p,isRecurring=recurring(j),isUnique=j.modalidade_cobranca==='unico';
+ const fixed=ps.find(x=>x.total_parcelas!=null)?.total_parcelas||null;
+ const number=p?.numero||ps.length+1,total=p?.total_parcelas||fixed||1;
+ const competenceValue=String(p?.competencia||'').slice(0,7);
+ const parcelFields=isRecurring
+  ?'<label>Competência<input name="competencia" type="month" required value="'+esc(competenceValue)+'"></label><input name="numero" type="hidden" value="'+esc(number)+'">'
+  :isUnique
+   ?'<input name="numero" type="hidden" value="1"><input name="total_parcelas" type="hidden" value="1">'
+   :'<label>Número da parcela<input name="numero" type="number" min="1" step="1" required value="'+esc(number)+'"></label>'+(fixed?'<label>Total de parcelas<input value="'+esc(fixed)+'" disabled><small>Definido para todo o job</small></label><input name="total_parcelas" type="hidden" value="'+esc(fixed)+'">':'<label>Total de parcelas do job<input name="total_parcelas" type="number" min="1" step="1" required value="'+esc(total)+'"></label>');
+ return '<form id="pl-finance-form" class="pl-finance-edit"><h3>'+(edit?'Editar detalhes':'Nova '+(isRecurring?'competência':'parcela'))+'</h3><div class="pl-finance-fields">'+parcelFields+'<label>Valor (R$)<input name="valor" type="number" min="0" step="0.01" required value="'+esc(p?.valor??j.valor_mensal??'')+'"></label><label>Vencimento / cobrança prevista<input name="vencimento" type="date" value="'+esc(p?.vencimento||'')+'"></label><label>Situação<select name="status"><option value="pendente"'+(paid(p)?'':' selected')+'>Pendente</option><option value="pago"'+(paid(p)?' selected':'')+'>Pago</option></select></label><label>Número da nota fiscal<input name="numero_nf" maxlength="80" placeholder="Informar NF" value="'+esc(p?.numero_nf||'')+'"></label><label>Data de emissão da NF<input name="data_emissao_nf" type="date" value="'+esc(p?.data_emissao_nf||'')+'"></label><label>Data da cobrança<input name="data_cobranca" type="date" value="'+esc(p?.data_cobranca||'')+'"></label><label>Data do pagamento<input name="data_pagamento" type="date" value="'+esc(p?.data_pagamento||'')+'"></label></div><label>Condição original da cobrança<input name="descricao_contratual" maxlength="240" placeholder="Ex.: entrega do parecer" value="'+esc(p?.descricao_contratual||'')+'"></label><label>Observações financeiras<textarea name="observacoes" rows="3" placeholder="Informações desta cobrança">'+esc(p?.observacoes||'')+'</textarea></label><div class="pl-finance-form-actions"><button type="submit">Salvar</button><button type="button" id="pl-finance-cancel">Cancelar</button></div><p class="pl-finance-form-message" id="pl-finance-form-message" role="status">'+esc(state.formError)+'</p></form>';
 }
 async function saveInstallment(e){
  e.preventDefault();
- const form=e.currentTarget,fd=new FormData(form),button=form.querySelector('[type="submit"]');
- const number=Number(fd.get('numero')),count=Number(fd.get('total_parcelas')),value=Number(fd.get('valor'));
- if(!Number.isInteger(number)||number<1||!Number.isInteger(count)||count<1||number>count||!Number.isFinite(value)||value<0){document.getElementById('pl-finance-form-message').textContent='Confira número, total e valor da parcela.';return}
- const payload={job_id:state.selectedJob.id,numero:number,total_parcelas:count,valor:value,vencimento:String(fd.get('vencimento')),status:String(fd.get('status')),observacoes:String(fd.get('observacoes')||''),descricao_contratual:String(fd.get('descricao_contratual')||'').trim()};
+ const form=e.currentTarget,fd=new FormData(form),button=form.querySelector('[type="submit"]'),j=state.selectedJob;
+ const number=Number(fd.get('numero')),value=Number(fd.get('valor')),isRecurring=recurring(j);
+ const count=isRecurring?null:Number(fd.get('total_parcelas'));
+ if(!Number.isInteger(number)||number<1||(!isRecurring&&(!Number.isInteger(count)||count<1||number>count))||!Number.isFinite(value)||value<0){document.getElementById('pl-finance-form-message').textContent='Confira a identificação e o valor da cobrança.';return}
+ const nullable=name=>String(fd.get(name)||'').trim()||null;
+ const payload={job_id:j.id,numero:number,total_parcelas:count,valor:value,vencimento:nullable('vencimento'),competencia:isRecurring?(nullable('competencia')+'-01'):null,status:String(fd.get('status')),numero_nf:nullable('numero_nf'),data_emissao_nf:nullable('data_emissao_nf'),data_cobranca:nullable('data_cobranca'),data_pagamento:nullable('data_pagamento'),observacoes:String(fd.get('observacoes')||''),descricao_contratual:String(fd.get('descricao_contratual')||'').trim()};
+ if(isRecurring&&!nullable('competencia')){document.getElementById('pl-finance-form-message').textContent='Informe a competência.';return}
  button.disabled=true;button.textContent='Salvando…';
  const sb=window.plSupabase;
- const result=state.editingParcel?await sb.from('job_parcelas').update(payload).eq('id',state.editingParcel).select('id').single():await sb.from('job_parcelas').insert(payload).select('id').single();
- if(result.error){button.disabled=false;button.textContent='Salvar parcela';document.getElementById('pl-finance-form-message').textContent='Não foi possível salvar: '+result.error.message;return}
+ const result=state.editingParcel&&state.editingParcel!=='new'?await sb.from('job_parcelas').update(payload).eq('id',state.editingParcel).select('id').single():await sb.from('job_parcelas').insert(payload).select('id').single();
+ if(result.error){button.disabled=false;button.textContent='Salvar';document.getElementById('pl-finance-form-message').textContent='Não foi possível salvar: '+result.error.message;return}
  state.editingParcel=null;state.formError='';
- const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes,competencia,descricao_contratual').in('job_id',state.jobs.map(j=>j.id).filter(Boolean)).order('vencimento',{ascending:true});
- if(error){document.getElementById('pl-finance-form-message').textContent='Parcela gravada, mas não foi possível atualizar a lista.';return}
+ const {data,error}=await sb.from('job_parcelas').select('id,job_id,numero,total_parcelas,valor,vencimento,status,observacoes,competencia,descricao_contratual,numero_nf,data_emissao_nf,data_cobranca,data_pagamento').in('job_id',state.jobs.map(j=>j.id).filter(Boolean)).order('vencimento',{ascending:true});
+ if(error){document.getElementById('pl-finance-form-message').textContent='Cobrança gravada, mas não foi possível atualizar a lista.';return}
  state.parcels=data||[];renderJob();
 }
 function renderJob(){
  const j=state.selectedJob;if(!j){state.view='overview';renderOverview();return}
  const ps=jobParcels(j.id),open=ps.filter(p=>!paid(p)),total=ps.reduce((sum,p)=>sum+Number(p.valor||0),0),remaining=open.reduce((sum,p)=>sum+Number(p.valor||0),0);
  const isNotes=state.jobTab==='observacoes';
- const rows=ps.length?ps.map(p=>{const st=parcelStatus(p);return '<div class="pl-installment'+(st==='pago'?' is-paid':'')+'"><div><strong>'+(p.competencia?new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(new Date(p.competencia+'T12:00:00')):(p.total_parcelas>1?'Parcela '+esc(p.numero)+'/'+esc(p.total_parcelas):'Pagamento único'))+'</strong><div class="pl-finance-meta">'+competence(p.vencimento)+'</div></div><div class="nf">Informar NF</div><div><span class="pl-finance-status" data-status="'+st+'">'+label(st)+'</span><div class="pl-finance-meta">'+date(p.vencimento)+'</div></div><strong>'+money(p.valor)+'</strong>'+(p.descricao_contratual?'<div class="pl-installment-note"><strong>Condição:</strong> '+esc(p.descricao_contratual)+'</div>':'')+(p.observacoes?'<div class="pl-installment-note">'+esc(p.observacoes)+'</div>':'')+'<button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar parcela / observações</button></div>'}).join(''):'<div class="pl-finance-empty">Este job ainda não possui parcelas cadastradas.</div>';
- const noteRows=ps.length?ps.map(p=>'<div class="pl-finance-note-row"><strong>Parcela '+esc(p.numero)+' — '+date(p.vencimento)+'</strong><p>'+esc(p.observacoes||'Sem observações.')+'</p><button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar observações</button></div>').join(''):'<p class="pl-finance-empty">Cadastre uma parcela para incluir observações.</p>';
+ const rows=ps.length?ps.map(p=>{const st=parcelStatus(p);return '<div class="pl-installment'+(st==='pago'?' is-paid':'')+'"><div class="pl-installment-title"><strong>'+esc(parcelTitle(p,j))+'</strong></div><button class="nf'+(p.numero_nf?' has-nf':'')+'" data-fin-edit="'+esc(p.id)+'" type="button">'+esc(p.numero_nf?'NF '+p.numero_nf:'Informar NF')+'</button><div><span class="pl-finance-status" data-status="'+st+'">'+label(st)+'</span></div><strong>'+money(p.valor)+'</strong>'+(p.descricao_contratual?'<div class="pl-installment-note"><strong>Condição:</strong> '+esc(p.descricao_contratual)+'</div>':'')+(p.observacoes?'<div class="pl-installment-note">'+esc(p.observacoes)+'</div>':'')+'<button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar detalhes</button></div>'}).join(''):'<div class="pl-finance-empty">Este job ainda não possui cobranças cadastradas.</div>';
+ const noteRows=ps.length?ps.map(p=>'<div class="pl-finance-note-row"><strong>'+esc(parcelTitle(p,j))+'</strong><p>'+esc(p.observacoes||'Sem observações.')+'</p><button class="pl-finance-edit-link" data-fin-edit="'+esc(p.id)+'" type="button">Editar detalhes</button></div>').join(''):'<p class="pl-finance-empty">Cadastre uma cobrança para incluir observações.</p>';
  const showForm=state.editingParcel!==null;
  const editing=state.editingParcel==='new'?null:ps.find(p=>String(p.id)===String(state.editingParcel));
- renderShell('<div class="pl-finance-detail-card"><button class="pl-finance-client-link" id="pl-fin-client">'+esc(j.cliente||'Cliente não informado')+' ›</button><h2>'+esc(j.titulo||'Job sem título')+'</h2><div class="pl-finance-meta">'+esc(j.empreendimento||'Sem empreendimento')+'</div><div class="pl-finance-total">'+money(remaining)+' <span class="pl-finance-meta">a receber</span></div><div class="pl-finance-meta">Total previsto: '+money(total||j.valor_acordado)+'</div></div><div class="pl-finance-tabs"><button type="button" class="pl-finance-tab'+(!isNotes?' is-active':'')+'" data-fin-tab="parcelas">Parcelas e competências</button><button type="button" class="pl-finance-tab'+(isNotes?' is-active':'')+'" data-fin-tab="observacoes">Observações</button></div><button class="pl-finance-add" id="pl-finance-add" type="button">+ Cadastrar parcela</button>'+(showForm?installmentForm(editing):'')+'<div>'+(isNotes?noteRows:rows)+'</div>',true);
+ renderShell('<div class="pl-finance-detail-card"><button class="pl-finance-client-link" id="pl-fin-client">'+esc(j.cliente||'Cliente não informado')+' ›</button><h2>'+esc(j.titulo||'Job sem título')+'</h2><div class="pl-finance-meta">'+esc(j.empreendimento||'Sem empreendimento')+'</div><div class="pl-finance-total">'+money(remaining)+' <span class="pl-finance-meta">a receber</span></div><div class="pl-finance-meta">Total previsto: '+money(total||j.valor_acordado)+'</div></div><div class="pl-finance-tabs"><button type="button" class="pl-finance-tab'+(!isNotes?' is-active':'')+'" data-fin-tab="parcelas">'+(recurring(j)?'Competências':'Parcelas')+'</button><button type="button" class="pl-finance-tab'+(isNotes?' is-active':'')+'" data-fin-tab="observacoes">Observações</button></div><button class="pl-finance-add" id="pl-finance-add" type="button">+ Cadastrar '+(recurring(j)?'competência':'parcela')+'</button>'+(showForm?installmentForm(editing):'')+'<div>'+(isNotes?noteRows:rows)+'</div>',true);
  document.getElementById('pl-fin-client').onclick=()=>{state.selectedClient=j.cliente;state.view='client';render()};
  root.querySelectorAll('[data-fin-tab]').forEach(b=>b.onclick=()=>{state.jobTab=b.dataset.finTab;state.editingParcel=null;renderJob()});
  document.getElementById('pl-finance-add').onclick=()=>{state.editingParcel='new';state.formError='';renderJob()};
