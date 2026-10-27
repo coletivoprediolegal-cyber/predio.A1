@@ -41,7 +41,7 @@ async function openPhotoPicker(jobId,box){
  const sb=window.plSupabase,picker=box.querySelector('#pl-feed-photo-picker');picker.hidden=false;picker.textContent='Carregando álbuns…';
  const {data:job,error:je}=await sb.from('jobs').select('empreendimento_id').eq('id',jobId).single();
  if(je||!job){picker.textContent='Não foi possível identificar o empreendimento.';return}
- const {data:albums,error}=await sb.from('albuns').select('id,titulo,nome').eq('empreendimento_id',job.empreendimento_id);
+ const {data:albums,error}=await sb.from('albuns').select('id,titulo').eq('empreendimento_id',job.empreendimento_id);
  if(error){picker.textContent='Erro ao carregar álbuns: '+error.message;return}
  picker.innerHTML='<label>Álbum <select id="pl-feed-album"><option value="">Escolha um álbum</option>'+ (albums||[]).map(a=>'<option value="'+escapeHTML(a.id)+'">'+escapeHTML(a.titulo||a.nome||'Álbum')+'</option>').join('')+'</select></label><div id="pl-feed-photo-options"></div><button type="button" id="pl-feed-picker-close">Concluir seleção</button>';
  picker.querySelector('#pl-feed-picker-close').onclick=()=>{picker.hidden=true;box.querySelector('#pl-feed-photo-selection').textContent=selectedPhotos.length+' fotografia(s) selecionada(s)'};
