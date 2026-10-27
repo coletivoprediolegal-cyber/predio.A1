@@ -89,15 +89,15 @@ function detail(){
  const links=workspace.albuns.filter(a=>a.mini_job_id===m.id);
  const options=allAlbums.filter(a=>!links.some(v=>v.id===a.id));
  const statusControl=isAdmin?'<label class="cw-detail-status">Andamento<select id="cw-status" '+(busy?'disabled':'')+'>'+Object.entries(titlecase).map(([k,v])=>'<option value="'+k+'" '+(m.status===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label>':'<span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span>';
- const notes='<label class="cw-detail-notes">Observações<textarea id="cw-notes" rows="4" '+(!isAdmin?'readonly':'')+'>'+esc(m.descricao||'')+'</textarea></label>';
- const save=isAdmin?'<button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar observações</button>':'';
+ const notes='<details class="cw-description"><summary>Descrição inicial do assunto</summary><div class="cw-description-body"><label class="cw-detail-notes">Descrição<textarea id="cw-notes" rows="3" '+(!isAdmin?'readonly':'')+'>'+esc(m.descricao||'')+'</textarea></label>'+(isAdmin?'<button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar descrição</button>':'')+'</div></details>';
+ const save='';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
  const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
  return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><h3>Álbuns vinculados</h3>'+albumRows+albumActions+'</div>';
 }
 function render(){
  if(!root)return;
- const heading='<div class="cw-jobhead"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' / JOB</div><h1>'+esc(job.titulo)+'</h1><p>Consultoria e monitoramento predial mensal</p></div>';
+ const heading=state.detail?'<div class="cw-jobhead cw-jobhead-small"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' · '+esc(job.titulo)+'</div></div>':'<div class="cw-jobhead"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' / JOB</div><h1>'+esc(job.titulo)+'</h1></div>';
  root.innerHTML='<div class="cw-app">'+heading+breadcrumb()+(errorText?'<p class="cw-error" role="alert">'+esc(errorText)+'</p>':'')+(state.detail?detail():!state.area?overview():subjectStrip()+(state.area==='comum'?common():privativa()))+'</div>';
  bind();
  if(state.detail&&window.PLMiniHistory)window.PLMiniHistory.mount(root,job.id,state.detail,isAdmin).catch(e=>console.warn('Histórico do assunto',e));
