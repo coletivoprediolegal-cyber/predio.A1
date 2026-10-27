@@ -108,3 +108,16 @@ html.pl-night .cw-subject-all{background:#d1a372;color:#14253b;border-color:#d1a
 .cw-history-toolbar button[aria-pressed=true]{background:#30465f;color:white}
 .cw-history-search{display:block;box-sizing:border-box;width:100%;padding:11px;margin:10px 0;border:1px solid #8490a066;border-radius:12px;background:transparent;color:inherit}
 .cw-history-more{border:1px solid #8490a066;border-radius:20px;background:transparent;color:inherit;padding:10px 15px;margin:12px 0}
+
+/* Detalhe do assunto: reduzir repetição e privilegiar o histórico */
+.cw-jobhead-small{margin:2px 0 7px!important;padding:0!important}
+.cw-jobhead-small .cw-kicker{font-size:10px!important;letter-spacing:.025em!important;line-height:1.4!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;opacity:.68}
+.cw-detail h2{margin:3px 0 4px!important;font-size:23px!important}
+.cw-detail-meta{margin:0 0 12px!important;font-size:11px!important}
+.cw-detail-status{margin-bottom:10px!important}
+.cw-description{margin:8px 0 8px;border-bottom:1px solid rgba(140,148,163,.2);padding:5px 0 11px}
+.cw-description summary{cursor:pointer;font:12px 'Instrument Sans',Arial,sans-serif;color:inherit;opacity:.78}
+.cw-description-body{padding:12px 0 2px}
+#cw-mini-history{margin:9px 0 18px!important;padding:12px 0 0!important}
+#cw-mini-history .cw-history-explain{display:none}
+.cw-crumb{margin-bottom:7px!important}
