@@ -121,3 +121,24 @@ html.pl-night .cw-subject-all{background:#d1a372;color:#14253b;border-color:#d1a
 #cw-mini-history{margin:9px 0 18px!important;padding:12px 0 0!important}
 #cw-mini-history .cw-history-explain{display:none}
 .cw-crumb{margin-bottom:7px!important}
+
+/* Assunto: conteúdo primeiro, sem formulário permanente */
+.cw-description-min{position:relative;padding:7px 0 12px;margin:0 0 6px;border-bottom:1px solid rgba(140,148,163,.18)}
+.cw-description-label{display:block;font-size:11px;opacity:.65;margin:0 0 3px}
+.cw-description-text{font:13px/1.45 'Instrument Sans',Arial,sans-serif;white-space:pre-wrap;margin:2px 76px 2px 0;overflow-wrap:anywhere}
+.cw-edit-desc{position:absolute;right:0;top:8px;padding:6px;border:0;background:transparent;color:inherit;font-size:11px;opacity:.8}
+.cw-description-edit{padding:8px 0}
+.cw-description-edit[hidden]{display:none!important}
+.cw-description-edit textarea{width:100%;min-height:75px}
+.cw-description-edit button{margin-right:8px}
+.cw-search-compact{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin:2px 0 8px}
+.cw-search-toggle{border:0;background:transparent;color:inherit;font-size:25px;line-height:1;min-width:38px;min-height:35px}
+.cw-search-compact .cw-history-search{flex:1;min-width:0;margin:0;padding:9px 12px}
+.cw-search-compact .cw-history-search[hidden]{display:none!important}
+#cw-mini-history{border-top:0!important;margin-top:4px!important;padding-top:5px!important}
+#cw-mini-history h3{font-size:15px!important;margin:4px 0!important}
+.cw-history-toolbar{gap:5px!important;margin:6px 0!important;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.cw-history-toolbar button{white-space:nowrap;padding:7px 10px;font-size:11px}
+.cw-history-entry{padding:11px 0!important}
+.cw-history-entry small{font-size:10px!important}
+.cw-history-entry p{font-size:13px!important;margin:4px 0!important}
