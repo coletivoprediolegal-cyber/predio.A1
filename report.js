@@ -461,6 +461,7 @@
       .map(v=>typeof v==='string'?v:typeof v==='object'&&v?(v.descricao||v.nome||v.label||''):'')
       .map(v=>compactSlashes(v)).filter(Boolean);
      const captions=[];
+     if(showSectionNames&&p.size===2&&i.secao_nome)captions.push({kind:'section',text:i.secao_nome});
      if(showManifestations)captions.push(...[...new Set(manifestations)].map(text=>({kind:'manifestation',text})));
      if(showPhotoNotes&&note)captions.push({kind:'note',text:note});
     const featured=i.destaque_no_relatorio;
@@ -472,7 +473,7 @@
      (featured?'<span class="rf-feature-mark" title="Destaque">★</span>':'')+
      '</div>'+(p.size===36||!captions.length?'':'<figcaption class="rf-caption">'+captions.map(c=>'<span class="rf-caption-line rf-caption-'+c.kind+'">'+escape(c.text)+'</span>').join('')+'</figcaption>')+'</figure>';
    }).join('');
-   const section=showSectionNames&&sectionNames.length===1?sectionNames[0]:'';
+   const section=showSectionNames&&sectionNames.length===1?sectionNames[0]:''; // Mixed sections are labeled per photo in the two-photo layout.
    return '<section class="rf-sheet rf-layout-'+p.size+'" data-layout="'+p.size+'"><img class="rf-lauda" src="assets/lauda-relatorio.jpg" alt="Lauda institucional Prédio Legal">'+
     '<div class="rf-content"><div class="rf-report-head"><div class="rf-report-title">RELATÓRIO FOTOGRÁFICO</div>'+
     '<div class="rf-report-enterprise">'+escape(name)+'</div>'+
