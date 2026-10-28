@@ -98,13 +98,13 @@
  async function backfillAll(onProgress){
   if(bulkRunning)return;
   bulkRunning=true;
-  let done=0,failed=0,total=0;
+  let done=0,failed=0,total=0,firstError='';
   try{
    const {data:pending,error}=await sb.rpc('pl_miniaturas_pendentes',{p_limite:500});
    if(error)throw error;
    if(!Array.isArray(pending))throw new Error('Lista de miniaturas indisponível');
    total=pending.length;
-   onProgress({done,failed,total});
+   onProgress({done,failed,total,firstError});
    let cursor=0;
    async function worker(){
     while(cursor<total){
@@ -121,12 +121,12 @@
       const saved=await sb.rpc('pl_registrar_miniatura',{p_album_id:item.album_id,p_foto_id:item.id,p_caminho:path});
       if(saved.error||saved.data!==true)throw saved.error||new Error('Registro não concluído');
       done++;
-     }catch(e){failed++;console.warn('Miniatura antiga:',item.id,e)}
+     }catch(e){failed++;if(!firstError)firstError=String(e?.message||e);console.warn('Miniatura antiga:',item.id,e)}
      onProgress({done,failed,total});
     }
    }
    await Promise.all([worker(),worker()]);
-   return {done,failed,total};
+   return {done,failed,total,firstError};
   }finally{bulkRunning=false}
  }
  window.PLAlbumThumbs={mount,prepare,original,transparent,backfillAll};
