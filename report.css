@@ -278,3 +278,6 @@
  white-space:pre-wrap!important;
  overflow-wrap:anywhere!important;
 }
+
+/* A identificação da seção deve acompanhar cada foto no layout de duas imagens. */
+.rf-layout-2 .rf-caption-section{display:block;color:#26354b;font-weight:700;font-size:9pt;line-height:1.2;margin-bottom:.5mm;white-space:normal;overflow-wrap:anywhere}
