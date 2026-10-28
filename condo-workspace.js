@@ -89,7 +89,7 @@ function detail(){
  const links=workspace.albuns.filter(a=>a.mini_job_id===m.id);
  const options=allAlbums.filter(a=>!links.some(v=>v.id===a.id));
  const statusControl=isAdmin?'<label class="cw-detail-status">Andamento<select id="cw-status" '+(busy?'disabled':'')+'>'+Object.entries(titlecase).map(([k,v])=>'<option value="'+k+'" '+(m.status===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label>':'<span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span>';
- const notes='<details class="cw-description"><summary>Descrição inicial do assunto</summary><div class="cw-description-body"><label class="cw-detail-notes">Descrição<textarea id="cw-notes" rows="3" '+(!isAdmin?'readonly':'')+'>'+esc(m.descricao||'')+'</textarea></label>'+(isAdmin?'<button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar descrição</button>':'')+'</div></details>';
+ const notes='<div class="cw-description-min"><span class="cw-description-label">Descrição</span><p class="cw-description-text">'+esc(m.descricao||'Sem descrição inicial.')+'</p>'+(isAdmin?'<button type="button" class="cw-edit-desc" data-action="edit-notes" aria-label="Editar descrição">✎ Editar</button><div class="cw-description-edit" hidden><textarea id="cw-notes" rows="3">'+esc(m.descricao||'')+'</textarea><button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar</button><button type="button" data-action="cancel-notes">Cancelar</button></div>':'')+'</div>';
  const save='';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
  const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
@@ -152,6 +152,8 @@ function bind(){
  root.querySelector('#cw-status')?.addEventListener('change',e=>guarded(async()=>{
   const {error}=await sb().from('mini_jobs').update({status:e.target.value,atualizado_em:new Date().toISOString()}).eq('id',state.detail).eq('job_id',job.id);if(error)throw error;
  }));
+ root.querySelector('[data-action="edit-notes"]')?.addEventListener('click',()=>{root.querySelector('.cw-description-edit').hidden=false;root.querySelector('[data-action="edit-notes"]').hidden=true;});
+ root.querySelector('[data-action="cancel-notes"]')?.addEventListener('click',()=>{root.querySelector('.cw-description-edit').hidden=true;root.querySelector('[data-action="edit-notes"]').hidden=false;});
  root.querySelector('[data-action="save-notes"]')?.addEventListener('click',()=>guarded(async()=>{
   const {error}=await sb().from('mini_jobs').update({descricao:root.querySelector('#cw-notes').value,atualizado_em:new Date().toISOString()}).eq('id',state.detail).eq('job_id',job.id);if(error)throw error;
  }));
