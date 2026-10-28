@@ -142,3 +142,14 @@ html.pl-night .cw-subject-all{background:#d1a372;color:#14253b;border-color:#d1a
 .cw-history-entry{padding:11px 0!important}
 .cw-history-entry small{font-size:10px!important}
 .cw-history-entry p{font-size:13px!important;margin:4px 0!important}
+
+/* Cores existentes: cobre, azul-marinho e vermelho de anomalia */
+.cw-entry-meta{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-height:25px}
+.cw-kind{font:600 10px 'Instrument Sans',Arial,sans-serif}
+.cw-kind-comentario{color:var(--copper,#ae743f)}
+.cw-kind-decisao{color:#30465f}
+.cw-kind-pendencia{color:#c34738}
+.cw-type-edit{margin-left:auto;border:0;background:transparent;color:inherit;opacity:.75;font-size:21px;min-height:30px;min-width:34px}
+.cw-type-options{display:flex;gap:5px;flex-wrap:wrap;width:100%;padding:5px 0}
+.cw-type-options button{font:11px 'Instrument Sans',Arial,sans-serif;border:1px solid #8996a466;border-radius:15px;padding:6px 9px;background:transparent;color:inherit}
+.cw-type-options button:disabled{opacity:.38}
