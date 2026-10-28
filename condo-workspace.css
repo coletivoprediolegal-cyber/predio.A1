@@ -153,3 +153,23 @@ html.pl-night .cw-subject-all{background:#d1a372;color:#14253b;border-color:#d1a
 .cw-type-options{display:flex;gap:5px;flex-wrap:wrap;width:100%;padding:5px 0}
 .cw-type-options button{font:11px 'Instrument Sans',Arial,sans-serif;border:1px solid #8996a466;border-radius:15px;padding:6px 9px;background:transparent;color:inherit}
 .cw-type-options button:disabled{opacity:.38}
+
+/* Histórico compacto: comentários comuns dispensam categoria */
+.cw-history-entry{padding:7px 0 8px!important}
+.cw-entry-meta{min-height:22px!important;gap:6px!important}
+.cw-history-entry p{margin:1px 0 3px!important;line-height:1.35!important}
+.cw-type-edit{min-height:24px!important;line-height:1!important}
+.cw-linked{background:transparent;color:inherit;border:0;font-size:19px;line-height:1;padding:4px 6px 4px 0;opacity:.72}
+.cw-linked-panel{display:flex;flex-wrap:wrap;gap:5px;padding:5px 0}
+.cw-linked-panel button{border:1px solid #8996a466;background:transparent;color:inherit;border-radius:7px;padding:9px 12px}
+.cw-attach-photos{border:0;background:transparent;color:inherit;opacity:.8;padding:5px 3px 8px 0;font-size:12px}
+.cw-photo-count{font-size:11px;opacity:.7;margin-left:5px}
+.cw-photo-picker[hidden]{display:none!important}
+.cw-photo-picker{border:1px solid #8996a466;border-radius:10px;padding:10px;margin:3px 0 10px}
+.cw-photo-picker select{width:100%;max-width:100%;padding:8px;background:transparent;color:inherit}
+.cw-photo-choices{max-height:220px;overflow:auto}
+.cw-photo-choice{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:11px;border-bottom:1px solid #8996a422}
+.cw-photo-choice-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.cw-albums-fold{border-top:1px solid #8996a43b;margin:20px 0;padding:13px 0}
+.cw-albums-fold summary{font-size:12px;cursor:pointer;color:inherit;opacity:.78}
+.cw-albums-body{padding:12px 0}
