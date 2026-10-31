@@ -728,7 +728,7 @@
  }
  // The existing album remains the source; this adds only a report action.
  const albumContent=document.querySelector('#pl-album-content');
- new MutationObserver(()=>{if(!albumContent.querySelector('.pl-jobhead')||albumContent.querySelector('#rf-create'))return;const button=document.createElement('button');button.id='rf-create';button.className='pl-new-album';button.textContent='Criar relatório fotográfico';button.onclick=()=>start(albumContent.dataset.albumId);albumContent.querySelector('.pl-jobhead').append(button)}).observe(albumContent,{childList:true});
+ new MutationObserver(()=>{if(!albumContent.querySelector('.pl-jobhead')||albumContent.querySelector('#rf-create'))return;const button=document.createElement('button');button.id='rf-create';button.className='pl-new-album';button.textContent='Criar PDF';button.onclick=()=>start(albumContent.dataset.albumId);(albumContent.querySelector('.pl-pro-import')||albumContent.querySelector('.pl-jobhead')).append(button)}).observe(albumContent,{childList:true});
  window.PLReports={start};
  // Make the existing Álbuns navigation useful for authorized professional albums.
  document.querySelectorAll('[data-action="Álbuns"]').forEach(button=>button.addEventListener('click',async()=>{
