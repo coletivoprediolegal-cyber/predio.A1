@@ -48,9 +48,18 @@ async function openPhotoPicker(jobId,box){
  picker.querySelector('#pl-feed-album').onchange=async e=>{
   const id=e.target.value,options=picker.querySelector('#pl-feed-photo-options');options.textContent='Carregando fotografias…';
   if(!id){options.textContent='';return}
-  const {data,error}=await sb.from('album_fotografias').select('fotografia_id,fotografias(nome_original)').eq('album_id',id).limit(500);
+  const {data,error}=await sb.from('album_fotografias').select('fotografia_id,ordem,fotografias(nome_original,arquivo_caminho,metadados)').eq('album_id',id).order('ordem',{ascending:true}).limit(500);
   if(error){options.textContent=error.message;return}
-  options.innerHTML=(data||[]).map(x=>'<label style="display:inline-flex;gap:5px;padding:8px"><input type="checkbox" data-photo="'+escapeHTML(x.fotografia_id)+'" '+(selectedPhotos.includes(x.fotografia_id)?'checked':'')+'>'+escapeHTML(x.fotografias?.nome_original||x.fotografia_id.slice(0,8))+'</label>').join('')||'Álbum vazio.';
+  options.innerHTML=(data||[]).map(x=>'<label class="pl-feed-photo-choice"><input type="checkbox" data-photo="'+escapeHTML(x.fotografia_id)+'" '+(selectedPhotos.includes(x.fotografia_id)?'checked':'')+'><img class="pl-feed-photo-thumb" alt="" loading="lazy" data-photo-path="'+escapeHTML(x.fotografias?.metadados?.miniatura_caminho||x.fotografias?.arquivo_caminho||'')+'"><span>'+escapeHTML(x.fotografias?.nome_original||x.fotografia_id.slice(0,8))+'</span></label>').join('')||'Álbum vazio.';
+  const thumbs=[...options.querySelectorAll('.pl-feed-photo-thumb[data-photo-path]')].filter(img=>img.dataset.photoPath);
+  // Pequenos lotes de URLs assinadas para evitar centenas de requisições individuais.
+  for(let n=0;n<thumbs.length;n+=80){
+   if(picker.querySelector('#pl-feed-album')?.value!==id)return;
+   const batch=thumbs.slice(n,n+80);
+   const {data:signed,error:signError}=await sb.storage.from('predio-legal-fotos').createSignedUrls(batch.map(img=>img.dataset.photoPath),3600);
+   if(signError)continue;
+   batch.forEach((img,i)=>{if(signed?.[i]?.signedUrl&&img.isConnected)img.src=signed[i].signedUrl});
+  }
   options.querySelectorAll('[data-photo]').forEach(el=>el.onchange=()=>{selectedPhotos=el.checked?[...new Set([...selectedPhotos,el.dataset.photo])]:selectedPhotos.filter(x=>x!==el.dataset.photo)});
  };
 }
