@@ -56,6 +56,15 @@
   if(!byMime[mime])return null;
   return {extension:byExtension[ext]===mime?ext:byMime[mime],mime};
  }
+ // Ordenação canônica pelo nome original, independente da ordem devolvida pelo Android/Google Fotos.
+ // Sensível a números e sufixos: 20261008_085934, ...A, ...B, 20261008_085935.
+ const fileNameOrder=new Intl.Collator('pt-BR',{numeric:true,sensitivity:'base'});
+ function comparePhotoNames(a,b){
+  const an=String(a.name||''),bn=String(b.name||'');
+  const stem=n=>n.replace(/\.[^.]+$/,'');
+  const result=fileNameOrder.compare(stem(an),stem(bn));
+  return result||fileNameOrder.compare(an,bn);
+ }
  function pickDevicePhotos(albumId,onImported){
   // A autorização já foi validada em pickPhotos. O seletor precisa abrir
   // diretamente no gesto do usuário, sem um await que interrompa o clique no Android.
@@ -65,7 +74,7 @@
   input.style.cssText='position:fixed;left:-10000px;top:0';
   document.body.append(input);
   input.onchange=()=>{
-   const files=Array.from(input.files||[]);
+   const files=Array.from(input.files||[]).sort(comparePhotoNames);
    input.remove();
    if(!files.length)return;
    selectedAlbum=albumId;afterImport=onImported;
