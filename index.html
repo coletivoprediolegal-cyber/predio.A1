@@ -452,7 +452,7 @@ async function openProfessionalJob(id){
  $('#pl-job-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">JOB PROFISSIONAL · '+esc(job.cliente||'')+'</div>'+
  '<h1>'+esc(job.titulo)+'</h1><div class="pl-meta">'+esc(job.empreendimento||'')+'</div></div>'+
  '<div class="pl-job-tabs" role="tablist" aria-label="Áreas do Job">'+[['inicio','Início'],['albuns','Álbuns'],['historico','Histórico'],['pendencias','Pendências']].map(([key,label])=>'<button type="button" data-job-tab="'+key+'" aria-pressed="'+(key==='inicio')+'">'+label+'</button>').join('')+'</div>'+
- '<section class="pl-job-panel" data-job-panel="inicio"><h2>Visão geral</h2><div class="pl-job-stats"><div><strong>'+albums.length+'</strong><span>Álbuns</span></div><div><strong id="pl-job-photo-count">—</strong><span>Fotos</span></div><div><strong id="pl-job-pending-count">—</strong><span>Pendências</span></div></div><div class="pl-job-last" id="pl-job-last">Última atividade: sem registros</div></section>'+
+ '<section class="pl-job-panel" data-job-panel="inicio" aria-label="Assuntos, tópicos e novo registro"></section>'+
  '<section class="pl-job-panel" data-job-panel="albuns" hidden><div class="pl-pro-albums-header"><h2>Álbuns fotográficos</h2><button type="button" id="pl-professional-album-new">＋ Criar álbum</button></div>'+
  '<div class="pl-area-tabs" role="tablist" aria-label="Setores do job">'+
  ['Todos','Áreas comuns','Áreas privativas','Outros'].map((label,i)=>'<button type="button" class="pl-area-tab'+(i===0?' is-active':'')+'" data-area-tab="'+i+'" aria-pressed="'+(i===0?'true':'false')+'">'+label+'</button>').join('')+'</div>'+
@@ -468,33 +468,32 @@ async function openProfessionalJob(id){
  const root=$('#pl-job-content');
  const panels=[...root.querySelectorAll('[data-job-panel]')];
  let feedReady=false;
+ const refreshPendingBadge=async()=>{
+  const {count,error:pendingError}=await window.plSupabase.from('job_feed').select('id',{head:true,count:'exact'}).eq('job_id',id).eq('tipo','pendencia').eq('resolvido',false);
+  const button=root.querySelector('[data-job-tab="pendencias"]');
+  if(button&&!pendingError){button.dataset.hasPending=String(count>0);button.setAttribute('aria-label',count>0?'Pendências: '+count+' abertas':'Pendências: nenhuma aberta')}
+ };
  const openTab=async tab=>{
   root.querySelectorAll('[data-job-tab]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.jobTab===tab)));
   panels.forEach(panel=>{panel.hidden=panel.dataset.jobPanel!==tab});
-  if(tab==='historico'||tab==='pendencias'){
+  if(tab!=='albuns'){
    if(!feedReady){feedReady=true;await window.PLJobFeed?.mount(id)}
+   if(!root.isConnected||tab!==root.querySelector('[data-job-tab][aria-pressed="true"]')?.dataset.jobTab)return;
    const feed=root.querySelector('#pl-job-feed');
-   if(feed){root.querySelector('[data-job-panel="'+tab+'"]').append(feed);
-    const view=feed.querySelector('[data-v="'+(tab==='pendencias'?'pendencias':'recentes')+'"]');
-    view?.click();
-    const forms=feed.querySelectorAll('#pl-feed-topic-form,#pl-feed-form');
-    forms.forEach(form=>{form.hidden=tab==='pendencias'});
+   const topics=root.querySelector('#pl-topic-manager');
+   const home=root.querySelector('[data-job-panel="inicio"]');
+   if(topics&&topics.parentElement!==home)home.append(topics);
+   if(feed){
+    root.querySelector('[data-job-panel="'+tab+'"]').append(feed);
+    feed.dataset.uiTab=tab;
+    feed.querySelector('[data-v="'+(tab==='pendencias'?'pendencias':'recentes')+'"]')?.click();
    }
   }
+  await refreshPendingBadge();
  };
  root.querySelectorAll('[data-job-tab]').forEach(btn=>btn.onclick=()=>openTab(btn.dataset.jobTab));
- (async()=>{
-  const sb=window.plSupabase;
-  const albumIds=albums.map(a=>a.id);
-  if(albumIds.length){
-   const {count}=await sb.from('album_fotografias').select('fotografia_id',{count:'exact',head:true}).in('album_id',albumIds);
-   if(root.isConnected&&count!==null)root.querySelector('#pl-job-photo-count').textContent=String(count);
-  }else root.querySelector('#pl-job-photo-count').textContent='0';
-  const {count:pending}=await sb.from('job_feed').select('id',{count:'exact',head:true}).eq('job_id',id).eq('tipo','pendencia').eq('resolvido',false);
-  if(root.isConnected&&pending!==null)root.querySelector('#pl-job-pending-count').textContent=String(pending);
-  const {data:latest}=await sb.from('job_feed').select('criado_em,conteudo').eq('job_id',id).order('criado_em',{ascending:false}).limit(1);
-  if(root.isConnected&&latest?.[0])root.querySelector('#pl-job-last').textContent='Última atividade · '+new Date(latest[0].criado_em).toLocaleDateString('pt-BR')+' · '+String(latest[0].conteudo||'').slice(0,90);
- })().catch(e=>console.warn('Resumo do Job:',e));
+ root.addEventListener('pl:job-pending-change',()=>refreshPendingBadge());
+ openTab('inicio').catch(e=>console.error('Falha ao preparar Início do Job:',e));
  // Capas leves: apenas a primeira foto de cada álbum, sem baixar o álbum inteiro.
  (async()=>{
   for(const a of albums||[]){
@@ -667,6 +666,25 @@ window.addEventListener('pl:authorized',load);
 #pl-job-content .pl-job-stats strong{display:block;font:600 23px 'Instrument Sans',Arial,sans-serif;color:#26354b}
 #pl-job-content .pl-job-stats span{font:11px 'Instrument Sans',Arial,sans-serif;color:#887c6e}
 #pl-job-content .pl-job-last{margin-top:18px;padding-top:13px;border-top:1px solid #ded4c7;font:12px/1.5 'Instrument Sans',Arial,sans-serif;color:#887c6e}
+/* Divisão estrita dos conteúdos do Job por aba. */
+#pl-job-content #pl-topic-manager{margin:9px 0 15px}
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]{border:0!important;margin:8px 0!important;padding:0!important}
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>h2,
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>.pl-feed-views,
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>#pl-feed-topics,
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>#pl-feed-topic-form,
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>label,
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>#pl-feed-view-hint,
+#pl-job-content .pl-job-feed[data-ui-tab="inicio"]>#pl-feed-items{display:none!important}
+#pl-job-content .pl-job-feed[data-ui-tab="historico"]>#pl-feed-topic-form,
+#pl-job-content .pl-job-feed[data-ui-tab="historico"]>#pl-feed-form{display:none!important}
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>#pl-feed-topic-form,
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>#pl-feed-form,
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>.pl-feed-views,
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>#pl-feed-topics{display:none!important}
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>h2{font-size:0!important}
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>h2::after{content:"Pendências";font-size:20px}
+#pl-job-content [data-job-tab="pendencias"][data-has-pending="true"]::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#b65b30;vertical-align:top;margin:0 0 5px 5px}
 /* Job: cartões de álbuns com capa e histórico visualmente integrado. */
 #pl-job-content .pl-pro-albums-list [data-professional-album]{display:flex;align-items:center;gap:11px;text-align:left}
 #pl-job-content .pl-album-cover{width:62px;height:58px;flex:0 0 62px;object-fit:cover;border-radius:8px;background:#eae4d9}
