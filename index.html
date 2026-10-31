@@ -467,7 +467,7 @@ async function openProfessionalJob(id){
  '<section class="pl-job-panel" data-job-panel="pendencias" hidden></section>';
  const root=$('#pl-job-content');
  const panels=[...root.querySelectorAll('[data-job-panel]')];
- let feedReady=false;
+ let feedMountPromise=null;
  const refreshPendingBadge=async()=>{
   const {count,error:pendingError}=await window.plSupabase.from('job_feed').select('id',{head:true,count:'exact'}).eq('job_id',id).eq('tipo','pendencia').eq('resolvido',false);
   const button=root.querySelector('[data-job-tab="pendencias"]');
@@ -477,7 +477,8 @@ async function openProfessionalJob(id){
   root.querySelectorAll('[data-job-tab]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.jobTab===tab)));
   panels.forEach(panel=>{panel.hidden=panel.dataset.jobPanel!==tab});
   if(tab!=='albuns'){
-   if(!feedReady){feedReady=true;await window.PLJobFeed?.mount(id)}
+   if(!feedMountPromise)feedMountPromise=Promise.resolve(window.PLJobFeed?.mount(id));
+   await feedMountPromise;
    if(!root.isConnected||tab!==root.querySelector('[data-job-tab][aria-pressed="true"]')?.dataset.jobTab)return;
    const feed=root.querySelector('#pl-job-feed');
    const topics=root.querySelector('#pl-topic-manager');
@@ -685,6 +686,21 @@ window.addEventListener('pl:authorized',load);
 #pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>h2{font-size:0!important}
 #pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>h2::after{content:"Pendências";font-size:20px}
 #pl-job-content [data-job-tab="pendencias"][data-has-pending="true"]::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#b65b30;vertical-align:top;margin:0 0 5px 5px}
+#pl-job-content .pl-job-feed:not([data-ui-tab="pendencias"]) .pl-pending-manage{display:none!important}
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"]>label{display:none!important}
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"] .pl-feed-meta{font-size:11px;color:#938574}
+#pl-job-content .pl-job-feed[data-ui-tab="pendencias"] [data-feed-item]{padding:12px 0;border-bottom:1px solid #ded4c7}
+#pl-job-content .pl-pending-manage{margin-top:9px}
+#pl-job-content .pl-pending-manage details>summary{display:inline-block;cursor:pointer;padding:7px 10px;border:1px solid #ded4c7;border-radius:9px;font:12px 'Instrument Sans',Arial,sans-serif;color:#26354b}
+#pl-job-content .pl-pending-manage form{margin:8px 0!important;padding:9px!important}
+#pl-job-content .pl-pending-manage .pl-pending-done{display:flex!important;align-items:center;gap:8px}
+#pl-job-content .pl-pending-manage .pl-pending-done input{width:17px!important;height:17px!important}
+#pl-job-content .pl-pending-comments{margin:8px 0}
+#pl-job-content .pl-pending-comments .pl-pending-comment{padding:6px 8px;background:#efe8df;border-radius:7px;margin:4px 0;font:12px/1.4 'Instrument Sans',Arial,sans-serif}
+#pl-job-content .pl-pending-comment small{color:#8f8274}
+#pl-job-content .pl-pending-comments form{display:flex!important;flex-direction:row!important;align-items:center!important;gap:6px!important;margin:6px 0!important;border:0!important;padding:4px 0!important}
+#pl-job-content .pl-pending-comments form input{min-width:0!important;flex:1}
+#pl-job-content .pl-pending-comments form button{flex:none}
 /* Job: cartões de álbuns com capa e histórico visualmente integrado. */
 #pl-job-content .pl-pro-albums-list [data-professional-album]{display:flex;align-items:center;gap:11px;text-align:left}
 #pl-job-content .pl-album-cover{width:62px;height:58px;flex:0 0 62px;object-fit:cover;border-radius:8px;background:#eae4d9}
@@ -711,4 +727,4 @@ window.addEventListener('pl:authorized',load);
 #pl-feed-photo-options .pl-feed-photo-choice input{width:17px!important;height:17px!important;flex:none;margin:0}
 #pl-feed-photo-options .pl-feed-photo-thumb{display:block;width:27px;height:27px;flex:0 0 27px;border-radius:4px;object-fit:cover;background:#e7e1d7}
 #pl-feed-photo-options .pl-feed-photo-choice span{overflow:hidden;text-overflow:ellipsis}
-</style><script src='job-feed.js?v=3' defer></script><style>.pl-topic-manager{margin:22px 0;padding:16px;border:1px solid #9995;border-radius:12px}.pl-topic-manager h2{font-size:18px}.pl-topic-manager h3{font-size:14px}.pl-topic-actions{display:grid;gap:12px}.pl-topic-actions form{display:grid;gap:7px}.pl-topic-manager input,.pl-topic-manager select,.pl-topic-manager textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #9997;border-radius:7px;background:transparent;color:inherit}.pl-topic-manager button{padding:10px;border:1px solid #9997;border-radius:7px;background:transparent;color:inherit}.pl-topic-group{margin-top:15px}.pl-topic{border-top:1px solid #9994;padding:11px 0}.pl-topic summary{cursor:pointer}.pl-topic label{display:block;margin:12px 0}.pl-topic-empty{opacity:.65}</style><script src="job-topics.js?v=1" defer></script></body></html>
+</style><script src='job-feed.js?v=4' defer></script><style>.pl-topic-manager{margin:22px 0;padding:16px;border:1px solid #9995;border-radius:12px}.pl-topic-manager h2{font-size:18px}.pl-topic-manager h3{font-size:14px}.pl-topic-actions{display:grid;gap:12px}.pl-topic-actions form{display:grid;gap:7px}.pl-topic-manager input,.pl-topic-manager select,.pl-topic-manager textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #9997;border-radius:7px;background:transparent;color:inherit}.pl-topic-manager button{padding:10px;border:1px solid #9997;border-radius:7px;background:transparent;color:inherit}.pl-topic-group{margin-top:15px}.pl-topic{border-top:1px solid #9994;padding:11px 0}.pl-topic summary{cursor:pointer}.pl-topic label{display:block;margin:12px 0}.pl-topic-empty{opacity:.65}</style><script src="job-topics.js?v=1" defer></script></body></html>
