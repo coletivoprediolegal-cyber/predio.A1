@@ -451,7 +451,7 @@ async function openProfessionalJob(id){
  if(error){$('#pl-job-content').innerHTML='<p class="pl-error">Não foi possível carregar os álbuns: '+esc(error.message)+'</p>';return}
  $('#pl-job-content').innerHTML='<div class="pl-jobhead"><div class="pl-meta">JOB PROFISSIONAL · '+esc(job.cliente||'')+'</div>'+
  '<h1>'+esc(job.titulo)+'</h1><div class="pl-meta">'+esc(job.empreendimento||'')+'</div></div>'+
- '<nav class="pl-job-tabs" aria-label="Áreas do Job">'+[['inicio','Início'],['albuns','Álbuns'],['historico','Histórico'],['pendencias','Pendências']].map(([key,label])=>'<button type="button" data-job-tab="'+key+'" aria-pressed="'+(key==='inicio')+'">'+label+'</button>').join('')+'</nav>'+
+ '<div class="pl-job-tabs" role="tablist" aria-label="Áreas do Job">'+[['inicio','Início'],['albuns','Álbuns'],['historico','Histórico'],['pendencias','Pendências']].map(([key,label])=>'<button type="button" data-job-tab="'+key+'" aria-pressed="'+(key==='inicio')+'">'+label+'</button>').join('')+'</div>'+
  '<section class="pl-job-panel" data-job-panel="inicio"><h2>Visão geral</h2><div class="pl-job-stats"><div><strong>'+albums.length+'</strong><span>Álbuns</span></div><div><strong id="pl-job-photo-count">—</strong><span>Fotos</span></div><div><strong id="pl-job-pending-count">—</strong><span>Pendências</span></div></div><div class="pl-job-last" id="pl-job-last">Última atividade: sem registros</div></section>'+
  '<section class="pl-job-panel" data-job-panel="albuns" hidden><div class="pl-pro-albums-header"><h2>Álbuns fotográficos</h2><button type="button" id="pl-professional-album-new">＋ Criar álbum</button></div>'+
  '<div class="pl-area-tabs" role="tablist" aria-label="Setores do job">'+
