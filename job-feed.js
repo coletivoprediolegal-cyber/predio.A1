@@ -22,7 +22,7 @@ async function mount(jobId){
  const payload={job_id:jobId,conteudo:String(fd.get('conteudo')||'').trim(),tipo:fd.get('tipo'),visibilidade:fd.get('visibilidade'),assunto_id:fd.get('assunto_id')||null,prazo:fd.get('tipo')==='pendencia'?(fd.get('prazo')||null):null};
  const {data:created,error}=await sb.from('job_feed').insert({...payload,autor_id:(await sb.auth.getUser()).data.user?.id}).select('id').single();if(!error&&selectedPhotos.length){const linked=await sb.from('job_feed_fotografias').insert(selectedPhotos.map(fotografia_id=>({feed_id:created.id,fotografia_id})));if(linked.error){form.querySelector('[role=status]').textContent='Registro salvo, mas fotos não vinculadas: '+linked.error.message;btn.disabled=false;return}}
  btn.disabled=false;if(error){form.querySelector('[role=status]').textContent='Erro: '+error.message;return}
- selectedPhotos=[];box.querySelector('#pl-feed-photo-selection').innerHTML='';form.reset();box.querySelector('.pl-feed-due').hidden=true;form.querySelector('[role=status]').textContent='Registro adicionado.';await load(jobId,box);
+ selectedPhotos=[];box.querySelector('#pl-feed-photo-selection').innerHTML='';form.reset();box.querySelector('.pl-feed-due').hidden=true;form.querySelector('[role=status]').textContent='Registro adicionado.';box.dispatchEvent(new CustomEvent('pl:job-pending-change',{bubbles:true}));await load(jobId,box);
  };
  await load(jobId,box);
 }
@@ -35,7 +35,29 @@ async function load(id,box){
  const feedIds=(data||[]).map(x=>x.id);const {data:links}=feedIds.length?await sb.from('job_feed_fotografias').select('feed_id,fotografia_id,fotografias(id,arquivo_caminho,nome_original)').in('feed_id',feedIds):{data:[]};const photosByFeed=new Map();for(const link of links||[]){if(!photosByFeed.has(link.feed_id))photosByFeed.set(link.feed_id,[]);photosByFeed.get(link.feed_id).push(link)}const ids=[...new Set((data||[]).map(x=>x.autor_id).filter(Boolean))];
  const {data:people}=ids.length?await sb.from('perfis_acesso').select('usuario_id,papel').in('usuario_id',ids):{data:[]};
  const authors=new Map((people||[]).map(p=>[p.usuario_id,p.papel]));
- list.innerHTML=(data||[]).map(x=>'<article data-feed-item data-tipo="'+escapeHTML(x.tipo)+'" data-resolvido="'+String(!!x.resolvido)+'" data-assunto="'+escapeHTML(x.assunto_id||'')+'"><div class="pl-feed-meta"><b>'+escapeHTML(labels[x.tipo]||x.tipo) +'</b> · '+escapeHTML(x.visibilidade)+' · '+escapeHTML(when(x.criado_em))+' · '+escapeHTML(authors.get(x.autor_id)||'Usuário')+' <small>'+escapeHTML((x.autor_id||'').slice(0,8))+'</small></div><p>'+escapeHTML(x.conteudo) +'</p>'+(photosByFeed.get(x.id)?.length?'<details class="pl-feed-linked-photos"><summary style="cursor:pointer;font-size:12px;color:inherit">📎 '+photosByFeed.get(x.id).length+' foto(s) vinculada(s)</summary><div style="padding:8px 0">'+photosByFeed.get(x.id).map(l=>'<div style="font-size:12px;padding:3px 0">📷 '+escapeHTML(l.fotografias?.nome_original||'Fotografia')+'</div>').join('')+'</div></details>':'')+(x.prazo?'<small>Prazo: '+escapeHTML(x.prazo)+'</small>':'')+'</article>').join('')||'<p>Nenhum registro neste Job.</p>';applyFilter(box);
+ const pendingIds=(data||[]).filter(x=>x.tipo==='pendencia').map(x=>x.id);
+ const {data:comments,error:commentError}=pendingIds.length?await sb.from('job_pendencia_comentarios').select('id,feed_id,conteudo,criado_em').in('feed_id',pendingIds).order('criado_em',{ascending:true}):{data:[],error:null};
+ const commentsByFeed=new Map();if(!commentError)for(const c of comments||[]){if(!commentsByFeed.has(c.feed_id))commentsByFeed.set(c.feed_id,[]);commentsByFeed.get(c.feed_id).push(c)}
+
+ list.innerHTML=(data||[]).map(x=>'<article data-feed-item data-tipo="'+escapeHTML(x.tipo)+'" data-resolvido="'+String(!!x.resolvido)+'" data-assunto="'+escapeHTML(x.assunto_id||'')+'"><div class="pl-feed-meta"><b>'+escapeHTML(labels[x.tipo]||x.tipo) +'</b> · '+escapeHTML(x.visibilidade)+' · '+escapeHTML(when(x.criado_em))+' · '+escapeHTML(authors.get(x.autor_id)||'Usuário')+' <small>'+escapeHTML((x.autor_id||'').slice(0,8))+'</small></div><p>'+escapeHTML(x.conteudo) +'</p>'+(photosByFeed.get(x.id)?.length?'<details class="pl-feed-linked-photos"><summary style="cursor:pointer;font-size:12px;color:inherit">📎 '+photosByFeed.get(x.id).length+' foto(s) vinculada(s)</summary><div style="padding:8px 0">'+photosByFeed.get(x.id).map(l=>'<div style="font-size:12px;padding:3px 0">📷 '+escapeHTML(l.fotografias?.nome_original||'Fotografia')+'</div>').join('')+'</div></details>':'')+(x.prazo?'<small>Prazo: '+escapeHTML(x.prazo.split('-').reverse().join('/'))+'</small>':'')+
+ (x.tipo==='pendencia'?'<div class="pl-pending-manage"><details><summary>Editar e acompanhar</summary><form data-pending-edit="'+escapeHTML(x.id)+'"><label>Descrição<textarea name="conteudo" rows="2" required>'+escapeHTML(x.conteudo)+'</textarea></label><label>Prazo<input name="prazo" type="date" value="'+escapeHTML(x.prazo||'')+'"></label><label class="pl-pending-done"><input name="resolvido" type="checkbox" '+(x.resolvido?'checked':'')+'> Concluída</label><button type="submit">Salvar alterações</button><p role="status"></p></form></details><div class="pl-pending-comments">'+(commentsByFeed.get(x.id)||[]).map(c=>'<p class="pl-pending-comment">'+escapeHTML(c.conteudo)+' <small>'+escapeHTML(new Date(c.criado_em).toLocaleDateString('pt-BR'))+'</small></p>').join('')+'<form data-pending-comment="'+escapeHTML(x.id)+'"><input name="conteudo" maxlength="5000" required placeholder="Comentar esta pendência…"><button type="submit">Comentar</button><p role="status"></p></form></div></div>':'')+'</article>').join('')||'<p>Nenhum registro neste Job.</p>';applyFilter(box);
+ box.querySelectorAll('[data-pending-edit]').forEach(form=>form.onsubmit=async e=>{
+  e.preventDefault();
+  const button=form.querySelector('button[type="submit"]'),status=form.querySelector('[role="status"]');button.disabled=true;
+  const payload={conteudo:form.elements.conteudo.value.trim(),prazo:form.elements.prazo.value||null,resolvido:form.elements.resolvido.checked};
+  const {data:updated,error:saveError}=await sb.from('job_feed').update(payload).eq('id',form.dataset.pendingEdit).eq('job_id',id).eq('tipo','pendencia').select('id').maybeSingle();
+  button.disabled=false;
+  if(saveError||!updated){status.textContent=saveError?.message||'Não foi possível editar esta pendência.';return}
+  box.dispatchEvent(new CustomEvent('pl:job-pending-change',{bubbles:true}));
+  await load(id,box);
+ });
+ box.querySelectorAll('[data-pending-comment]').forEach(form=>form.onsubmit=async e=>{
+  e.preventDefault();const button=form.querySelector('button[type="submit"]'),status=form.querySelector('[role="status"]');button.disabled=true;
+  const {data:userData}=await sb.auth.getUser();
+  const {error:commentError}=await sb.from('job_pendencia_comentarios').insert({feed_id:form.dataset.pendingComment,autor_id:userData?.user?.id,conteudo:form.elements.conteudo.value.trim()});
+  button.disabled=false;if(commentError){status.textContent=commentError.message;return}
+  await load(id,box);
+ });
 }
 async function openPhotoPicker(jobId,box){
  const sb=window.plSupabase,picker=box.querySelector('#pl-feed-photo-picker');picker.hidden=false;picker.textContent='Carregando álbuns…';
