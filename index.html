@@ -59,6 +59,8 @@
 .pl-show-deleted{display:block;text-align:right;color:#9b9184;font:11px 'Instrument Sans',Arial,sans-serif;margin:7px 0}
 .pl-lightbox[hidden]{display:none}.pl-lightbox{position:fixed;inset:0;background:#13171ef2;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:15px;gap:14px}
 .pl-lightbox img{max-width:100%;max-height:65vh;object-fit:contain}.pl-lightbox button{color:#fff;background:transparent;border:0;font-size:16px}#pl-lightbox-close{position:absolute;top:14px;right:18px;font-size:28px;z-index:3}#pl-link-job{position:absolute;top:16px;left:16px;right:auto;max-width:calc(100% - 90px);font-size:12px;padding:8px;border:1px solid #ddd8;border-radius:20px}#pl-edit-photo-note{position:static;display:block;margin:12px auto 0;padding:9px 14px;border:1px solid #ddd8;border-radius:20px;font-size:13px}
+#pl-lightbox-section{display:block;max-width:78vw;min-height:36px;padding:5px 28px 5px 11px;border-radius:18px;border:1px solid #ffffff77;background:#293446;color:#f3eee6;font:12px 'Instrument Sans',Arial,sans-serif}
+#pl-lightbox-section[hidden]{display:none!important}
 #pl-lightbox-label{font:13px Cambria,Georgia,serif;color:#f3eee6;text-align:center}
 @media(min-width:700px){.pl-photo-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style><style>
@@ -369,7 +371,7 @@ $('#pl-photo-grid').innerHTML=fotos.length?fotos.map(f=>{
 const src=imageSafe(albumProfessional?f.thumbUrl:f.url);
 return '<article class="pl-photo-card'+(f.excluida?' pl-photo-deleted':'')+(f.oculta?' pl-photo-hidden':'')+'"><button class="pl-photo-preview" data-preview="'+esc(f.id)+'" aria-label="Ampliar foto '+esc(f.numero)+'">'+(albumProfessional?'<img loading="lazy" data-pl-thumb="'+esc(f.id)+'" src="'+esc(src||window.PLAlbumThumbs?.transparent||'')+'" alt="Fotografia '+esc(f.numero)+'">':src?'<img loading="lazy" src="'+esc(src)+'" alt="Fotografia '+esc(f.numero)+'">':'<span>Sem imagem</span>')+'<span class="pl-photo-num">'+esc(f.numero)+'</span>'+(f.observacao?'<span class="pl-photo-has-note" title="Possui observação">▤</span>':'')+'</button><div class="pl-photo-actions"><button data-act="'+(f.excluida?'restaurar':'excluir')+'" data-id="'+esc(f.id)+'" title="'+(f.excluida?'Restaurar':'Excluir')+'">'+(f.excluida?'↶':'<svg class="pl-trash-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 4h4m-8 3 1 13h10l1-13M10 11v6m4-6v6"/></svg>')+'</button><button data-act="ocultar" data-id="'+esc(f.id)+'" class="'+(f.oculta?'marked':'')+'" title="Ocultar do relatório">−</button><button data-act="destaque" data-id="'+esc(f.id)+'" class="'+(f.destaque?'marked':'')+'" title="Destaque">★</button><button data-act="anomalia" data-id="'+esc(f.id)+'" class="'+(f.anomalia?'anomaly-'+esc(f.anomalia):'')+'" title="Anomalia" aria-label="Alternar anomalia"><svg class="pl-warning-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5Z" fill="currentColor"/><path d="M12 9v5.5" stroke="#fff" stroke-width="2.1" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.2" fill="#fff"/></svg></button></div></article>'
 }).join(''):'<p class="pl-empty">Nenhuma fotografia neste filtro.</p>';
-$('#pl-photo-grid').querySelectorAll('[data-preview]').forEach(b=>b.addEventListener('click',async()=>{const f=albumFotos.find(x=>x.id===b.dataset.preview);if(!f)return;const src=albumProfessional?await window.PLAlbumThumbs?.original(f):imageSafe(f.url);if(!src)return;$('#pl-lightbox-img').src=src;$('#pl-lightbox-label').textContent='Foto '+String(f.numero).padStart(2,'0');const dt=f.capturada_em?new Date(f.capturada_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Data e hora não registradas';$('#pl-lightbox-meta').innerHTML='<p class="pl-photo-meta-line">Foto '+esc(String(f.numero).padStart(2,'0'))+' · '+esc(dt)+'</p>'+(f.observacao?'<p class="pl-photo-observation">'+esc(f.observacao)+'</p>':'')+(f.anomalia?'<div class="pl-photo-status">⚠ Anomalia '+esc(f.anomalia)+'</div>':f.destaque?'<div class="pl-photo-status">★ Destaque</div>':'')+'<button id="pl-edit-photo-note" type="button">✎ '+(f.observacao?'Editar observação':'Adicionar observação')+'</button>'+(albumProfessional?'':'<button id="pl-link-job">＋ Vincular a outro job</button>');$('#pl-edit-photo-note').addEventListener('click',async()=>{await changePhoto(f.id,'observacao');const updated=albumFotos.find(x=>x.id===f.id);if(updated){$('#pl-lightbox-meta').querySelector('p')?.remove();const note=document.createElement('p');note.textContent=updated.observacao||'Sem observação';$('#pl-lightbox-meta').insertBefore(note,$('#pl-edit-photo-note'));$('#pl-edit-photo-note').textContent=updated.observacao?'✎ Editar observação':'✎ Adicionar observação'}});$('#pl-link-job')?.addEventListener('click',()=>{ $('#pl-lightbox').hidden=true;linkPhotoToJob(f.id)});$('#pl-lightbox').hidden=false}));
+$('#pl-photo-grid').querySelectorAll('[data-preview]').forEach(b=>b.addEventListener('click',async()=>{const f=albumFotos.find(x=>x.id===b.dataset.preview);if(!f)return;const src=albumProfessional?await window.PLAlbumThumbs?.original(f):imageSafe(f.url);if(!src)return;$('#pl-lightbox-img').src=src;$('#pl-lightbox-label').textContent='Foto '+String(f.numero).padStart(2,'0');const dt=f.capturada_em?new Date(f.capturada_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Data e hora não registradas';$('#pl-lightbox-meta').innerHTML='<p class="pl-photo-meta-line">Foto '+esc(String(f.numero).padStart(2,'0'))+' · '+esc(dt)+'</p>'+(f.observacao?'<p class="pl-photo-observation">'+esc(f.observacao)+'</p>':'')+(f.anomalia?'<div class="pl-photo-status">⚠ Anomalia '+esc(f.anomalia)+'</div>':f.destaque?'<div class="pl-photo-status">★ Destaque</div>':'')+'<button id="pl-edit-photo-note" type="button">✎ '+(f.observacao?'Editar observação':'Adicionar observação')+'</button>'+(albumProfessional?'':'<button id="pl-link-job">＋ Vincular a outro job</button>');$('#pl-edit-photo-note').addEventListener('click',async()=>{await changePhoto(f.id,'observacao');const updated=albumFotos.find(x=>x.id===f.id);if(updated){$('#pl-lightbox-meta').querySelector('p')?.remove();const note=document.createElement('p');note.textContent=updated.observacao||'Sem observação';$('#pl-lightbox-meta').insertBefore(note,$('#pl-edit-photo-note'));$('#pl-edit-photo-note').textContent=updated.observacao?'✎ Editar observação':'✎ Adicionar observação'}});$('#pl-link-job')?.addEventListener('click',()=>{ $('#pl-lightbox').hidden=true;linkPhotoToJob(f.id)});$('#pl-lightbox').hidden=false;setupLightboxSection(f.id).catch(console.warn)}));
 $('#pl-photo-grid').querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>changePhoto(b.dataset.id,b.dataset.act)));
 if(albumProfessional)window.PLAlbumThumbs?.mount(albumFotos,albumAtual,$('#pl-photo-grid'));
 if(document.querySelector('#pl-section-controls'))window.plAlbumOrganizer?.refresh();
@@ -393,6 +395,47 @@ window.addEventListener('pl:report-album-updated',event=>{
 });
 $('#pl-album-back').addEventListener('click',()=>switchTo('job'));
 document.addEventListener('pl:open-album',e=>{if(e.detail?.id)openAlbum(e.detail.id,true)});
+// Navegação lateral no visualizador: respeita os cartões atualmente visíveis (filtro e seção).
+let lightboxStart=null;
+const lightbox=$('#pl-lightbox');
+lightbox.addEventListener('touchstart',e=>{if(e.touches.length!==1||e.target.closest('button,select,input,textarea'))return;lightboxStart={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});
+lightbox.addEventListener('touchend',e=>{
+ if(!lightboxStart||lightbox.hidden)return;
+ const dx=e.changedTouches[0].clientX-lightboxStart.x,dy=e.changedTouches[0].clientY-lightboxStart.y;
+ lightboxStart=null;if(Math.abs(dx)<55||Math.abs(dx)<Math.abs(dy)*1.3)return;
+ const ids=[...document.querySelectorAll('#pl-photo-grid [data-preview]')];
+ const active=lightbox.dataset.photoId;
+ const i=ids.findIndex(b=>b.dataset.preview===active);
+ const target=ids[i+(dx<0?1:-1)];
+ if(target)target.click();
+},{passive:true});
+async function setupLightboxSection(photoId){
+ const viewer=$('#pl-lightbox');viewer.dataset.photoId=photoId;
+ let selector=$('#pl-lightbox-section');
+ if(!selector){selector=document.createElement('select');selector.id='pl-lightbox-section';selector.setAttribute('aria-label','Seção da fotografia');$('#pl-lightbox-meta').before(selector)}
+ selector.hidden=!albumProfessional;
+ if(!albumProfessional)return;
+ const albumId=albumAtual;
+ const [sectionsResult,membersResult]=await Promise.all([
+  window.plSupabase.rpc('pl_album_secoes_profissionais',{p_album_id:albumId}),
+  window.plSupabase.rpc('pl_album_membros_profissionais',{p_album_id:albumId})
+ ]);
+ if(viewer.hidden||viewer.dataset.photoId!==photoId||albumAtual!==albumId)return;
+ if(sectionsResult.error||membersResult.error){selector.hidden=true;return}
+ const sections=Array.isArray(sectionsResult.data)?sectionsResult.data:[];
+ const member=(membersResult.data||[]).find(x=>String(x.fotografia_id)===String(photoId));
+ selector.innerHTML='<option value="">Sem seção</option>'+sections.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.nome)+'</option>').join('');
+ selector.value=member?.secao_id||'';
+ selector.onchange=async()=>{
+  const old=member?.secao_id||null,value=selector.value||null;
+  selector.disabled=true;
+  const {error}=await window.plSupabase.rpc('pl_album_organizar_profissional',{p_album_id:albumId,p_action:'move',p_payload:{ids:[photoId],secao_id:value}});
+  selector.disabled=false;
+  if(error){selector.value=old||'';alert('Não foi possível mudar a seção: '+error.message);return}
+  if(member)member.secao_id=value;
+  await reloadAlbum();
+ };
+}
 $('#pl-lightbox-close').addEventListener('click',()=>{$('#pl-lightbox').hidden=true;$('#pl-lightbox-img').removeAttribute('src')});
 $('#pl-lightbox').addEventListener('click',e=>{if(e.target.id==='pl-lightbox')$('#pl-lightbox-close').click()});
 async function openProfessionalJob(id){
