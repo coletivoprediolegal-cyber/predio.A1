@@ -2,8 +2,8 @@
 'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const titlecase={planejado:'Planejado',em_andamento:'Em andamento',concluido:'Concluído',suspenso:'Suspenso'};
-const state={area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:''};
-let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],busy=false,errorText='',isAdmin=false;
+const state={area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:'',unitFilter:'todos',unitFilter:'todos'};
+let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],pendingByUnit={},busy=false,errorText='',isAdmin=false;
 const sb=()=>window.plSupabase;
 const mini=()=>workspace.mini_jobs||[];
 const locais=()=>workspace.locais||[];
@@ -95,11 +95,15 @@ function unitView(){
  const u=selectedUnit();if(!u){state.unit=null;return '<p class="cw-empty">Unidade não encontrada.</p>'}
  return '<div class="cw-subheading"><div><h2>'+esc(labelLocal(u.id))+'</h2><p>'+esc(u.tipo_unidade||'Unidade privativa')+'</p></div></div>'+filterBar()+list(currentItems())+documentPanel(u.id,null);
 }
+function unitSignals(u){
+ const n=pendingByUnit[u.id]||0;
+ return '<small style="display:block;color:'+(n?'#b42318':'#667085')+'">'+(n?'⚠ '+n+' pendência(s)':'Sem pendências')+'</small>'+(u.obra_ativa?'<small style="display:block;color:#a66a00">🚧 Obra em andamento</small>':'');
+}
 function towerView(){
  const t=towers().find(x=>x.id===state.tower);if(!t)return '<p class="cw-empty">Torre não encontrada.</p>';
  const q=state.search.toLocaleLowerCase('pt-BR');
- const rows=units(t.id).filter(u=>(u.numero||'').toLowerCase().includes(q));
- return '<div class="cw-subheading"><h2>Torre '+esc(t.bloco)+'</h2><span>'+units(t.id).length+' apartamentos</span></div><input class="cw-quick-search" id="cw-unit-search" aria-label="Buscar apartamento" placeholder="Buscar apartamento..." value="'+esc(state.search)+'"><div class="cw-unit-grid">'+rows.map(u=>'<button data-unit="'+esc(u.id)+'"><strong>'+esc(u.numero)+'</strong><small>'+mini().filter(m=>m.local_id===u.id).length+' assunto(s)</small></button>').join('')+'</div>';
+ const rows=units(t.id).filter(u=>(u.numero||'').toLowerCase().includes(q)).filter(u=>state.unitFilter==='obras'?u.obra_ativa:state.unitFilter==='pendencias'?(pendingByUnit[u.id]||0)>0:true).sort((a,b)=>Number((pendingByUnit[b.id]||0)>0)-Number((pendingByUnit[a.id]||0)>0)||Number(b.obra_ativa)-Number(a.obra_ativa)||sorted(a.numero,b.numero));
+ return '<div class="cw-subheading"><h2>Torre '+esc(t.bloco)+'</h2><span>'+units(t.id).length+' apartamentos</span></div><input class="cw-quick-search" id="cw-unit-search" aria-label="Buscar apartamento" placeholder="Buscar apartamento..." value="'+esc(state.search)+'"><div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">'+[['todos','Todos'],['obras','Obras em andamento'],['pendencias','Com pendências']].map(x=>'<button type="button" data-unit-filter="'+x[0]+'" aria-pressed="'+(state.unitFilter===x[0])+'">'+x[1]+'</button>').join('')+'</div><div class="cw-unit-grid">'+rows.map(u=>'<div style="border:2px solid '+(u.obra_ativa?'#e4a32b':'transparent')+';border-radius:12px;padding:3px"><button data-unit="'+esc(u.id)+'"><strong>'+esc(u.numero)+'</strong>'+unitSignals(u)+'</button>'+(isAdmin?'<button type="button" data-toggle-obra="'+esc(u.id)+'" style="font-size:12px;margin:5px">'+(u.obra_ativa?'✓ Concluir obra':'＋ Iniciar obra')+'</button>':'')+'</div>').join('')+'</div>';
 }
 function privativa(){
  const tabs='<div class="cw-tabs" role="tablist" aria-label="Forma de consulta"><button role="tab" aria-selected="'+(state.tab==='apartamento')+'" data-tab="apartamento">Por apartamento</button><button role="tab" aria-selected="'+(state.tab==='assunto')+'" data-tab="assunto">Por tópico</button></div>';
@@ -145,6 +149,9 @@ async function reload(){
  const {data,error}=await sb().rpc('pl_condo_workspace_data',{p_job_id:job.id});
  if(error||!data?.job_id)throw new Error(error?.message||'Job não autorizado ou estrutura indisponível.');
  workspace=data;
+ pendingByUnit={};
+ const ids=(workspace.mini_jobs||[]).filter(m=>m.local_id&&!m.demonstracao).map(m=>m.id);
+ if(ids.length){const p=await sb().from('job_feed').select('mini_job_id').eq('tipo','pendencia').eq('resolvido',false).in('mini_job_id',ids);if(!p.error)for(const row of p.data||[]){const m=workspace.mini_jobs.find(x=>x.id===row.mini_job_id);if(m)pendingByUnit[m.local_id]=(pendingByUnit[m.local_id]||0)+1;}else console.warn('Pendências indisponíveis',p.error);}
  const result=await sb().from('albuns').select('id,titulo,assunto,data_vistoria').eq('job_principal_id',job.id).order('criado_em',{ascending:false});
  allAlbums=result.error?[]:result.data||[];
  render();
@@ -164,6 +171,12 @@ function bind(){
  root.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{state.area=b.dataset.area;state.tab='apartamento';state.tower=null;state.unit=null;state.subject=null;state.filter='todos';state.form=false;render()});
  root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;state.tower=null;state.unit=null;state.subject=null;state.filter='todos';state.form=false;render()});
  root.querySelectorAll('[data-tower]').forEach(b=>b.onclick=()=>{state.tower=b.dataset.tower;state.search='';render()});
+ root.querySelectorAll('[data-unit-filter]').forEach(b=>b.onclick=()=>{state.unitFilter=b.dataset.unitFilter;render()});
+ root.querySelectorAll('[data-toggle-obra]').forEach(b=>b.onclick=()=>guarded(async()=>{
+  const u=locais().find(x=>x.id===b.dataset.toggleObra);if(!u)throw new Error('Apartamento não encontrado');
+  const {error}=await sb().from('locais').update({obra_ativa:!u.obra_ativa}).eq('id',u.id).eq('empreendimento_id',u.empreendimento_id);
+  if(error)throw error;
+ }));
  root.querySelectorAll('[data-unit]').forEach(b=>b.onclick=()=>{state.unit=b.dataset.unit;state.filter='todos';render()});
  root.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{state.subject=b.dataset.subject||null;state.form=false;render()});
  root.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{state.filter=b.dataset.filter;render()});
