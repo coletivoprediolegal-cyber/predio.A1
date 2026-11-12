@@ -34,3 +34,6 @@
 }
 
 .pl-section-sort-list{padding:8px 0}.pl-section-sort-row{display:flex;align-items:center;gap:8px;padding:6px 2px}.pl-section-sort-row span{flex:1}.pl-section-sort-row button{min-width:36px;min-height:34px;border:1px solid #b7b0a5;border-radius:8px;background:transparent;color:inherit}
+
+/* Arrastar seções: mesmo padrão visual da organização das fotografias */
+.pl-section-sort-list{display:flex;flex-direction:column;gap:6px;padding:10px 0}.pl-section-sort-row{display:flex;align-items:center;gap:10px;border:1px solid #c9c0b4;border-radius:12px;padding:7px 10px;background:var(--pl-surface,#fff);min-height:48px}.pl-section-sort-row span{flex:1;font-weight:500}.pl-section-drag-handle{display:grid;place-items:center;min-width:38px;min-height:38px;border-radius:50%;border:1px solid #c9c0b4;background:transparent;color:inherit;cursor:grab;touch-action:none;font-size:21px}.pl-section-drag-handle:active{cursor:grabbing}.pl-section-drag-source{opacity:.35}.pl-section-drag-ghost{box-shadow:0 12px 30px #0003;transform-origin:center}
