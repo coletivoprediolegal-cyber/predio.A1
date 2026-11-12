@@ -3,7 +3,7 @@
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const titlecase={planejado:'Planejado',em_andamento:'Em andamento',concluido:'Concluído',suspenso:'Suspenso'};
 const state={area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:'',unitFilter:'todos'};
-let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],pendingByUnit={},busy=false,errorText='',isAdmin=false;
+let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],pendingByUnit={},vistoriaByMini={},busy=false,errorText='',isAdmin=false;
 const sb=()=>window.plSupabase;
 const mini=()=>workspace.mini_jobs||[];
 const locais=()=>workspace.locais||[];
@@ -30,7 +30,7 @@ function breadcrumb(){
 }
 function itemRow(m){
  const amount=workspace.albuns.filter(a=>a.mini_job_id===m.id).length;
- return '<button class="cw-mini" data-detail="'+esc(m.id)+'"><div class="cw-mini-main"><div class="cw-mini-eyebrow">'+(m.fixado?'📌 ':'')+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><strong>'+esc(m.titulo)+'</strong><small>'+esc(m.area==='privativa'?labelLocal(m.local_id):'Área comum')+(amount?' · '+amount+' álbum(ns)':'')+'</small></div><span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span><span class="cw-chevron">›</span></button>';
+ return '<button class="cw-mini" data-detail="'+esc(m.id)+'"><div class="cw-mini-main"><div class="cw-mini-eyebrow">'+(m.fixado?'📌 ':'')+(vistoriaByMini[m.id]?'☑ ':'')+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><strong>'+esc(m.titulo)+'</strong><small>'+esc(m.area==='privativa'?labelLocal(m.local_id):'Área comum')+(amount?' · '+amount+' álbum(ns)':'')+'</small></div><span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span><span class="cw-chevron">›</span></button>';
 }
 function shortSubjectLabel(m){
  const t=String(m.titulo||''),a=String(m.assunto||'');
@@ -149,7 +149,7 @@ function detail(){
  const links=workspace.albuns.filter(a=>a.mini_job_id===m.id);
  const options=allAlbums.filter(a=>!links.some(v=>v.id===a.id));
  const statusControl=isAdmin?'<label class="cw-detail-status">Andamento<select id="cw-status" '+(busy?'disabled':'')+'>'+Object.entries(titlecase).map(([k,v])=>'<option value="'+k+'" '+(m.status===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label>':'<span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span>';
- const pinControl=isAdmin?'<button type="button" data-action="toggle-pin" aria-pressed="'+!!m.fixado+'" aria-label="'+(m.fixado?'Desafixar assunto':'Fixar assunto')+'" title="'+(m.fixado?'Desafixar assunto':'Fixar assunto')+'" style="margin:8px 0;padding:7px 12px;border:1px solid currentColor;border-radius:8px;cursor:pointer">'+(m.fixado?'📌 Desafixar assunto':'📍 Fixar assunto')+'</button>':(m.fixado?'<span aria-label="Assunto fixado">📌 Fixado</span>':'');
+ const pinControl=isAdmin?'<button type="button" data-action="toggle-pin" aria-pressed="'+!!m.fixado+'" aria-label="'+(m.fixado?'Desafixar assunto':'Fixar assunto')+'" title="'+(m.fixado?'Desafixar assunto':'Fixar assunto')+'" style="margin:8px 0;padding:7px 12px;border:1px solid currentColor;border-radius:8px;cursor:pointer">'+(m.fixado?'📌':'📍')+'</button>':(m.fixado?'<span aria-label="Assunto fixado">📌 Fixado</span>':'');
  const notes='<div class="cw-description-min"><span class="cw-description-label">Descrição</span><p class="cw-description-text">'+esc(m.descricao||'Sem descrição inicial.')+'</p>'+(isAdmin?'<button type="button" class="cw-edit-desc" data-action="edit-notes" aria-label="Editar descrição">✎ Editar</button><div class="cw-description-edit" hidden><textarea id="cw-notes" rows="3">'+esc(m.descricao||'')+'</textarea><button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar</button><button type="button" data-action="cancel-notes">Cancelar</button></div>':'')+'</div>';
  const save='';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
@@ -171,9 +171,9 @@ async function reload(){
  const pins=await sb().from('mini_jobs').select('id,fixado').eq('job_id',job.id);
  if(pins.error)console.warn('Estado de assuntos fixados indisponível',pins.error);
  else {const byId=new Map((pins.data||[]).map(x=>[x.id,!!x.fixado]));for(const m of workspace.mini_jobs||[])m.fixado=byId.get(m.id)||false;}
- pendingByUnit={};
+ pendingByUnit={};vistoriaByMini={};
  const ids=(workspace.mini_jobs||[]).filter(m=>m.local_id&&!m.demonstracao).map(m=>m.id);
- if(ids.length){const p=await sb().from('job_feed').select('mini_job_id').eq('tipo','pendencia').eq('resolvido',false).in('mini_job_id',ids);if(!p.error)for(const row of p.data||[]){const m=workspace.mini_jobs.find(x=>x.id===row.mini_job_id);if(m)pendingByUnit[m.local_id]=(pendingByUnit[m.local_id]||0)+1;}else console.warn('Pendências indisponíveis',p.error);}
+ if(ids.length){const p=await sb().from('job_feed').select('mini_job_id,demanda_vistoria').eq('tipo','pendencia').eq('resolvido',false).in('mini_job_id',ids);if(!p.error)for(const row of p.data||[]){const m=workspace.mini_jobs.find(x=>x.id===row.mini_job_id);if(m){pendingByUnit[m.local_id]=(pendingByUnit[m.local_id]||0)+1;if(row.demanda_vistoria)vistoriaByMini[m.id]=true;}}else console.warn('Pendências indisponíveis',p.error);}
  const result=await sb().from('albuns').select('id,titulo,assunto,data_vistoria').eq('job_principal_id',job.id).order('criado_em',{ascending:false});
  allAlbums=result.error?[]:result.data||[];
  render();
