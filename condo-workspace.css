@@ -180,3 +180,10 @@ html.pl-night .cw-subject-all{background:#d1a372;color:#14253b;border-color:#d1a
 .cw-description-edit button[data-action="cancel-notes"]{background:transparent;border:1px solid #c0ad95;color:#806241}
 .cw-description-edit button:focus-visible{outline:2px solid #806241;outline-offset:2px}
 html.pl-night .cw-description-edit button[data-action="cancel-notes"]{background:transparent;border-color:#5a6c80;color:#e3c39f}
+
+/* Vistoria: ícone compacto, independente do PIN e da classificação */
+.cw-vistoria-toggle{border:1px solid transparent;background:transparent;color:#9a968f;border-radius:9px;padding:5px 8px;margin-left:auto;min-width:36px;min-height:34px;font-size:19px;cursor:pointer;opacity:.65}
+.cw-vistoria-toggle[aria-pressed="true"]{color:#1e665c;background:#e5f1eb;border-color:#9fc6b6;opacity:1}
+.cw-vistoria-toggle:disabled{cursor:default}
+.cw-vistoria-toggle:focus-visible{outline:2px solid #1e665c;outline-offset:2px}
+html.pl-night .cw-vistoria-toggle[aria-pressed="true"]{color:#bce8d8;background:#254d48;border-color:#4f8b7e}
