@@ -109,9 +109,16 @@ async function mountDocuments(){
  }catch(e){if(panel.isConnected)panel.innerHTML='<p class="cw-error">'+esc(e.message||String(e))+'</p>';}
 }
 
+function unitAlbumPanel(u){
+ const items=mini().filter(m=>m.local_id===u.id&&m.area==='privativa'&&!m.demonstracao);
+ const links=(workspace.albuns||[]).filter(a=>items.some(m=>m.id===a.mini_job_id));
+ const actions=isAdmin?'<div class="cw-album-actions"><button type="button" data-action="unit-new-album">＋ Criar álbum</button></div><div data-unit-album-form hidden><form class="cw-form" id="cw-unit-album-form"><label>Vincular ao assunto do apartamento<select name="mini_job_id" required><option value="">Selecione o assunto</option>'+items.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.titulo)+' · '+esc(m.assunto)+'</option>').join('')+'</select></label><div class="cw-form-actions"><button type="button" data-action="unit-album-cancel">Cancelar</button><button type="submit">Continuar</button></div></form></div>':'';
+ const rows=links.map(a=>{const m=items.find(x=>x.id===a.mini_job_id);return '<div class="cw-album-link"><button type="button" data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <small> · '+esc(m?.titulo||'')+'</small><span>›</span></button><button type="button" aria-label="Abrir assunto" title="Abrir assunto" data-detail="'+esc(a.mini_job_id)+'">↗</button></div>'}).join('');
+ return '<section aria-label="Álbuns do apartamento" class="cw-albums-fold"><h2 class="cw-section-label">Álbuns do apartamento</h2>'+actions+(rows||'<p class="cw-empty">Nenhum álbum vinculado aos assuntos deste apartamento.</p>')+'</section>';
+}
 function unitView(){
  const u=selectedUnit();if(!u){state.unit=null;return '<p class="cw-empty">Unidade não encontrada.</p>'}
- return '<div class="cw-subheading"><div><h2>'+esc(labelLocal(u.id))+'</h2><p>'+esc(u.tipo_unidade||'Unidade privativa')+'</p>'+unitSignals(u)+'</div>'+(isAdmin?'<details style="position:relative;align-self:start"><summary aria-label="Opções do apartamento" title="Opções do apartamento" style="cursor:pointer;padding:8px 12px;list-style:none;font-size:20px">⋯</summary><div style="padding:8px;border:1px solid #ddd;border-radius:8px"><button type="button" data-toggle-obra="'+esc(u.id)+'">'+(u.obra_ativa?'✓ Concluir obra':'＋ Iniciar obra')+'</button></div></details>':'')+'</div>'+filterBar()+list(currentItems())+documentPanel(u.id,null);
+ return '<div class="cw-subheading"><div><h2>'+esc(labelLocal(u.id))+'</h2><p>'+esc(u.tipo_unidade||'Unidade privativa')+'</p>'+unitSignals(u)+'</div>'+(isAdmin?'<details style="position:relative;align-self:start"><summary aria-label="Opções do apartamento" title="Opções do apartamento" style="cursor:pointer;padding:8px 12px;list-style:none;font-size:20px">⋯</summary><div style="padding:8px;border:1px solid #ddd;border-radius:8px"><button type="button" data-toggle-obra="'+esc(u.id)+'">'+(u.obra_ativa?'✓ Concluir obra':'＋ Iniciar obra')+'</button></div></details>':'')+'</div>'+unitAlbumPanel(u)+filterBar()+list(currentItems())+documentPanel(u.id,null);
 }
 function unitSignals(u){
  const n=pendingByUnit[u.id]||0;
@@ -154,7 +161,7 @@ function detail(){
  const save='';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
  const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
- return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+pinControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><details class="cw-albums-fold"><summary>Álbuns vinculados'+(links.length?' ('+links.length+')':'')+'</summary><div class="cw-albums-body">'+albumRows+albumActions+'</div></details>'+documentPanel(m.local_id,m.id)+'</div>';
+ return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+pinControl+notes+save+albumActions+'<details class="cw-albums-fold"'+(links.length?' open':'')+'><summary>Álbuns vinculados'+(links.length?' ('+links.length+')':'')+'</summary><div class="cw-albums-body">'+albumRows+'</div></details><section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section>'+documentPanel(m.local_id,m.id)+'</div>';
 }
 function render(){
  if(!root)return;
@@ -181,6 +188,17 @@ async function reload(){
 async function guarded(fn){
  if(busy)return false;
  busy=true;errorText='';try{await fn();await reload();return true}catch(e){errorText=e.message||'Não foi possível concluir a alteração';render();return false}finally{busy=false}
+}
+function createAlbumForSubject(miniId){
+ const m=mini().find(x=>x.id===miniId);if(!m){errorText='Selecione um assunto antes de criar o álbum.';render();return}
+ if(!window.PLAlbumImport?.create){errorText='Criador de álbuns indisponível.';render();return}
+ const jobId=job.id;
+ window.PLAlbumImport.create(jobId,async albumId=>{
+  const linked=await guarded(async()=>{
+   const {error}=await sb().from('mini_job_albuns').insert({mini_job_id:miniId,album_id:albumId});if(error)throw new Error('Álbum criado, mas não vinculado ao assunto: '+error.message+'. Use Vincular álbum existente para concluir.');
+  });
+  if(linked)document.dispatchEvent(new CustomEvent('pl:open-album',{detail:{id:albumId}}));
+ });
 }
 function bind(){
  root.querySelectorAll('[data-crumb]').forEach(b=>b.onclick=()=>{
@@ -237,14 +255,18 @@ function bind(){
  root.querySelector('[data-action="save-notes"]')?.addEventListener('click',()=>guarded(async()=>{
   const {error}=await sb().from('mini_jobs').update({descricao:root.querySelector('#cw-notes').value,atualizado_em:new Date().toISOString()}).eq('id',state.detail).eq('job_id',job.id);if(error)throw error;
  }));
- root.querySelector('[data-action="new-album"]')?.addEventListener('click',()=>{
-  if(!window.PLAlbumImport?.create){errorText='Criador de álbuns indisponível.';render();return}
-  window.PLAlbumImport.create(job.id,async albumId=>{
-   const linked=await guarded(async()=>{
-    const {error}=await sb().from('mini_job_albuns').insert({mini_job_id:state.detail,album_id:albumId});if(error)throw error;
-   });
-   if(linked)document.dispatchEvent(new CustomEvent('pl:open-album',{detail:{id:albumId}}));
-  });
+ root.querySelector('[data-action="new-album"]')?.addEventListener('click',()=>createAlbumForSubject(state.detail));
+ root.querySelector('[data-action="unit-new-album"]')?.addEventListener('click',()=>{
+  const items=mini().filter(m=>m.local_id===state.unit&&m.area==='privativa'&&!m.demonstracao);
+  if(!items.length){state.form=true;render();root.querySelector('#cw-form [name="titulo"]')?.focus();return}
+  if(items.length===1){createAlbumForSubject(items[0].id);return}
+  const panel=root.querySelector('[data-unit-album-form]');if(panel){panel.hidden=false;panel.querySelector('select')?.focus()}
+ });
+ root.querySelector('[data-action="unit-album-cancel"]')?.addEventListener('click',()=>{const panel=root.querySelector('[data-unit-album-form]');if(panel)panel.hidden=true});
+ root.querySelector('#cw-unit-album-form')?.addEventListener('submit',e=>{
+  e.preventDefault();const id=String(new FormData(e.currentTarget).get('mini_job_id')||'');
+  if(!mini().some(m=>m.id===id&&m.local_id===state.unit&&m.area==='privativa'&&!m.demonstracao)){errorText='Selecione um assunto deste apartamento.';render();return}
+  createAlbumForSubject(id);
  });
  root.querySelector('#cw-album-pick')?.addEventListener('change',e=>{
   const id=e.target.value;if(!id)return;
