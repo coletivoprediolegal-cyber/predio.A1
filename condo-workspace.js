@@ -14,6 +14,7 @@ const towers=()=>locais().filter(l=>type(l).includes('torre')||type(l).includes(
 const units=tower=>locais().filter(l=>l.local_pai_id===tower&&l.numero).sort((a,b)=>sorted(a.numero,b.numero));
 const labelLocal=id=>{const l=locais().find(x=>x.id===id);return l?(l.numero?'Apto '+l.numero+' · Torre '+l.bloco:l.nome):'Sem unidade definida'};
 const currentItems=()=>mini().filter(m=>m.area===state.area&&(state.area!=='privativa'||state.tab==='assunto'?(state.subject?shortSubjectLabel(m)===state.subject:true):(state.unit?m.local_id===state.unit:state.tower?units(state.tower).some(l=>l.id===m.local_id):true))&&(state.filter==='todos'||m.status===state.filter));
+const pinFirst=items=>[...items].sort((a,b)=>Number(!!b.fixado)-Number(!!a.fixado));
 const subjects=()=>[...new Set(mini().filter(m=>m.area===state.area).map(m=>m.assunto))].sort(sorted);
 function breadcrumb(){
  const nodes=[['Monitoramento','overview']];
@@ -29,7 +30,7 @@ function breadcrumb(){
 }
 function itemRow(m){
  const amount=workspace.albuns.filter(a=>a.mini_job_id===m.id).length;
- return '<button class="cw-mini" data-detail="'+esc(m.id)+'"><div class="cw-mini-main"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><strong>'+esc(m.titulo)+'</strong><small>'+esc(m.area==='privativa'?labelLocal(m.local_id):'Área comum')+(amount?' · '+amount+' álbum(ns)':'')+'</small></div><span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span><span class="cw-chevron">›</span></button>';
+ return '<button class="cw-mini" data-detail="'+esc(m.id)+'"><div class="cw-mini-main"><div class="cw-mini-eyebrow">'+(m.fixado?'📌 ':'')+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><strong>'+esc(m.titulo)+'</strong><small>'+esc(m.area==='privativa'?labelLocal(m.local_id):'Área comum')+(amount?' · '+amount+' álbum(ns)':'')+'</small></div><span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span><span class="cw-chevron">›</span></button>';
 }
 function shortSubjectLabel(m){
  const t=String(m.titulo||''),a=String(m.assunto||'');
@@ -68,7 +69,7 @@ function addButton(){
  return isAdmin?'<button class="cw-add" data-action="add">＋ Novo assunto</button>':'';
 }
 function list(items,showAdd=true){
- return (showAdd?'<div class="cw-list-actions"><span>'+items.length+' assunto(s)</span>'+addButton()+'</div>':'')+(items.length?'<div class="cw-mini-list">'+items.map(itemRow).join('')+'</div>':'<p class="cw-empty">Nenhum assunto nesta seleção.</p>')+(state.form?form():'');
+ return (showAdd?'<div class="cw-list-actions"><span>'+items.length+' assunto(s)</span>'+addButton()+'</div>':'')+(items.length?'<div class="cw-mini-list">'+pinFirst(items).map(itemRow).join('')+'</div>':'<p class="cw-empty">Nenhum assunto nesta seleção.</p>')+(state.form?form():'');
 }
 
 function documentPanel(local,subject){
@@ -148,11 +149,12 @@ function detail(){
  const links=workspace.albuns.filter(a=>a.mini_job_id===m.id);
  const options=allAlbums.filter(a=>!links.some(v=>v.id===a.id));
  const statusControl=isAdmin?'<label class="cw-detail-status">Andamento<select id="cw-status" '+(busy?'disabled':'')+'>'+Object.entries(titlecase).map(([k,v])=>'<option value="'+k+'" '+(m.status===k?'selected':'')+'>'+v+'</option>').join('')+'</select></label>':'<span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span>';
+ const pinControl=isAdmin?'<button type="button" data-action="toggle-pin" aria-pressed="'+!!m.fixado+'" aria-label="'+(m.fixado?'Desafixar assunto':'Fixar assunto')+'" title="'+(m.fixado?'Desafixar assunto':'Fixar assunto')+'" style="margin:8px 0;padding:7px 12px;border:1px solid currentColor;border-radius:8px;cursor:pointer">'+(m.fixado?'📌 Desafixar assunto':'📍 Fixar assunto')+'</button>':(m.fixado?'<span aria-label="Assunto fixado">📌 Fixado</span>':'');
  const notes='<div class="cw-description-min"><span class="cw-description-label">Descrição</span><p class="cw-description-text">'+esc(m.descricao||'Sem descrição inicial.')+'</p>'+(isAdmin?'<button type="button" class="cw-edit-desc" data-action="edit-notes" aria-label="Editar descrição">✎ Editar</button><div class="cw-description-edit" hidden><textarea id="cw-notes" rows="3">'+esc(m.descricao||'')+'</textarea><button class="cw-save" data-action="save-notes" '+(busy?'disabled':'')+'>Salvar</button><button type="button" data-action="cancel-notes">Cancelar</button></div>':'')+'</div>';
  const save='';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
  const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
- return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><details class="cw-albums-fold"><summary>Álbuns vinculados'+(links.length?' ('+links.length+')':'')+'</summary><div class="cw-albums-body">'+albumRows+albumActions+'</div></details>'+documentPanel(m.local_id,m.id)+'</div>';
+ return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+pinControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><details class="cw-albums-fold"><summary>Álbuns vinculados'+(links.length?' ('+links.length+')':'')+'</summary><div class="cw-albums-body">'+albumRows+albumActions+'</div></details>'+documentPanel(m.local_id,m.id)+'</div>';
 }
 function render(){
  if(!root)return;
@@ -166,6 +168,9 @@ async function reload(){
  const {data,error}=await sb().rpc('pl_condo_workspace_data',{p_job_id:job.id});
  if(error||!data?.job_id)throw new Error(error?.message||'Job não autorizado ou estrutura indisponível.');
  workspace=data;
+ const pins=await sb().from('mini_jobs').select('id,fixado').eq('job_id',job.id);
+ if(pins.error)console.warn('Estado de assuntos fixados indisponível',pins.error);
+ else {const byId=new Map((pins.data||[]).map(x=>[x.id,!!x.fixado]));for(const m of workspace.mini_jobs||[])m.fixado=byId.get(m.id)||false;}
  pendingByUnit={};
  const ids=(workspace.mini_jobs||[]).filter(m=>m.local_id&&!m.demonstracao).map(m=>m.id);
  if(ids.length){const p=await sb().from('job_feed').select('mini_job_id').eq('tipo','pendencia').eq('resolvido',false).in('mini_job_id',ids);if(!p.error)for(const row of p.data||[]){const m=workspace.mini_jobs.find(x=>x.id===row.mini_job_id);if(m)pendingByUnit[m.local_id]=(pendingByUnit[m.local_id]||0)+1;}else console.warn('Pendências indisponíveis',p.error);}
@@ -219,6 +224,11 @@ function bind(){
    if(error)throw error;state.form=false;
   });
  });
+ root.querySelector('[data-action="toggle-pin"]')?.addEventListener('click',()=>guarded(async()=>{
+  const m=mini().find(x=>x.id===state.detail);if(!m)return;
+  const {error}=await sb().from('mini_jobs').update({fixado:!m.fixado,atualizado_em:new Date().toISOString()}).eq('id',m.id).eq('job_id',job.id);
+  if(error)throw error;
+ }));
  root.querySelector('#cw-status')?.addEventListener('change',e=>guarded(async()=>{
   const {error}=await sb().from('mini_jobs').update({status:e.target.value,atualizado_em:new Date().toISOString()}).eq('id',state.detail).eq('job_id',job.id);if(error)throw error;
  }));
