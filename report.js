@@ -5,7 +5,7 @@
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
  let albumChanged=false;
- let showPhotoNotes=true,showManifestations=true,showSectionNames=true;
+ let showPhotoNotes=true,showManifestations=true,showSectionNames=true;let sectionOrder=[],albumItemOrder=[];
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
  function error(e){const box=dialog.querySelector('.rf-message');if(box)box.textContent=e.message||String(e)}
@@ -125,6 +125,7 @@
    }catch(e){console.warn('Vínculos de seções indisponíveis:',e)}
    const sectionByPhoto=new Map(sectionMemberships.map(x=>[String(x.fotografia_id),x.secao_id]));
    const sectionNames=new Map(sections.map(x=>[String(x.id),x.nome||x.nome_secao||x.titulo||'']));
+   sectionOrder=sections.map(x=>({id:String(x.id),nome:x.nome||x.nome_secao||x.titulo||''}));
    state={album,id:null,demo,empreendimento,titulo:'Relatório fotográfico',
     descricao:'',layout:12,startNumber:1,items:[]};
    for(const link of links){
@@ -142,6 +143,7 @@
      fotos_por_pagina_override:null
     });
    }
+   albumItemOrder=state.items.map(i=>i.fotografia_id);
    const visibleTotal=state.items.filter(i=>i.incluir).length;
    state.layout=visibleTotal<=2?2:visibleTotal<=4?4:visibleTotal<=6?6:visibleTotal<=9?9:12;
    dirty=false;render();
@@ -158,6 +160,9 @@
  function totalPages(){return core.paginate(state.items,state.layout).length}
  function countIncluded(){return state.items.filter(i=>i.incluir).length}
  function reportNumber(item){const numbers=state.items.map(i=>Number(i.numero)).filter(Number.isFinite);const first=numbers.length?Math.min(...numbers):1;return Math.max(1,Number(state.startNumber)||1)+Number(item.numero)-first}
+ function organizeForPDF(){const order=new Map(sectionOrder.map((x,i)=>[x.id,i]));const original=new Map(albumItemOrder.map((id,i)=>[id,i]));state.items.sort((a,b)=>{const ai=a.secao_id?String(a.secao_id):'',bi=b.secao_id?String(b.secao_id):'';const ar=ai?(order.get(ai)??sectionOrder.length):sectionOrder.length+1,br=bi?(order.get(bi)??sectionOrder.length):sectionOrder.length+1;return ar-br||original.get(a.fotografia_id)-original.get(b.fotografia_id)});dirty=true;previewIndex=0;preview();}
+ function restoreAlbumOrder(){const original=new Map(albumItemOrder.map((id,i)=>[id,i]));state.items.sort((a,b)=>original.get(a.fotografia_id)-original.get(b.fotografia_id));dirty=true;previewIndex=0;preview();}
+ function renderSectionOrder(){const host=dialog.querySelector('#rf-section-order');if(!host)return;host.innerHTML=sectionOrder.map((x,i)=>'<div class="rf-section-order-row"><span>'+escape(x.nome)+'</span><button type="button" data-sec-up="'+i+'" aria-label="Subir seção '+escape(x.nome)+'" '+(i===0?'disabled':'')+'>↑</button><button type="button" data-sec-down="'+i+'" aria-label="Descer seção '+escape(x.nome)+'" '+(i===sectionOrder.length-1?'disabled':'')+'>↓</button></div>').join('')||'<p>Nenhuma seção cadastrada.</p>';host.querySelectorAll('[data-sec-up],[data-sec-down]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.secUp??b.dataset.secDown),j=b.hasAttribute('data-sec-up')?i-1:i+1;[sectionOrder[i],sectionOrder[j]]=[sectionOrder[j],sectionOrder[i]];renderSectionOrder();organizeForPDF();});}
  function render(){
   previewIndex=0;editFilter='all';editQuery='';editsVisible=30;
   const total=state.items.length,shown=countIncluded();
@@ -178,7 +183,7 @@
    '<span id="rf-preview-count"></span><button id="rf-page-next" type="button" aria-label="Próxima página">›</button></div></div>'+
    '<div class="rf-preview" aria-label="Prévia da página selecionada"></div></section>'+
    '<details class="rf-advanced" id="rf-advanced"><summary>Ajustes opcionais <span>Fotos e observações</span></summary>'+
-   '<div class="rf-advanced-inner"><p>Arraste a foto para ordenar · ★ Destaque · ⚠ Anomalia</p>'+
+   '<div class="rf-advanced-inner"><details class="rf-section-organizer"><summary>☷ Organizar seções</summary><p>Ordem apenas deste PDF; o álbum não será alterado.</p><div id="rf-section-order"></div><div class="rf-section-actions"><button type="button" id="rf-section-apply">Organizar por seções</button><button type="button" id="rf-section-reset">Restaurar ordem do álbum</button></div></details><p>Arraste a foto para ordenar · ★ Destaque · ⚠ Anomalia</p>'+
    (!state.demo?'<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label>'+
    '<div class="rf-advanced-save"><button id="rf-save" type="button">Salvar relatório</button><button id="rf-load" type="button">Abrir relatório salvo</button></div></div>':'')+
    '<div class="rf-edit-tools"><label>Exibir <select id="rf-edit-filter"><option value="all">Todas as fotos</option><option value="highlight">Destaques</option>'+
@@ -187,6 +192,7 @@
    '<div id="rf-items" class="rf-items"></div>'+
    '<button id="rf-more" type="button" hidden>Mostrar mais fotos</button></div></details>';
   dialog.querySelector('#rf-close').onclick=close;
+  renderSectionOrder();dialog.querySelector('#rf-section-apply').onclick=organizeForPDF;dialog.querySelector('#rf-section-reset').onclick=()=>{restoreAlbumOrder();};
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
   dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;preview();};
   dialog.querySelector('#rf-pdf').onclick=()=>exportPDF(false);
