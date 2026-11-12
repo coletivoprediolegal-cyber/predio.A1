@@ -173,3 +173,10 @@ html.pl-night .cw-subject-all{background:#d1a372;color:#14253b;border-color:#d1a
 .cw-albums-fold{border-top:1px solid #8996a43b;margin:20px 0;padding:13px 0}
 .cw-albums-fold summary{font-size:12px;cursor:pointer;color:inherit;opacity:.78}
 .cw-albums-body{padding:12px 0}
+
+/* Padronização dos botões de edição da descrição */
+.cw-description-edit button{appearance:none;-webkit-appearance:none;font:inherit;font-size:13px;line-height:1.25;border-radius:20px;padding:10px 17px;min-height:40px;cursor:pointer}
+.cw-description-edit .cw-save{background:#283955;border:1px solid #283955;color:#fff}
+.cw-description-edit button[data-action="cancel-notes"]{background:transparent;border:1px solid #c0ad95;color:#806241}
+.cw-description-edit button:focus-visible{outline:2px solid #806241;outline-offset:2px}
+html.pl-night .cw-description-edit button[data-action="cancel-notes"]{background:transparent;border-color:#5a6c80;color:#e3c39f}
