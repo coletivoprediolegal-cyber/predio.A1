@@ -1,5 +1,5 @@
 (function(){
-let albumId=null,sections=[],active='all',selected=new Set(),mode=false,dragging=false,reorder=false,dragId=null;
+let albumId=null,sections=[],active='all',selected=new Set(),mode=false,dragging=false,reorder=false,dragId=null,sectionSorting=false;
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function rpc(name,args){
  const professional=$('#pl-album-content')?.dataset.professional==='true';
@@ -13,6 +13,7 @@ async function rpc(name,args){
 }
 async function load(){const host=$('#pl-album-content'),grid=$('#pl-photo-grid');if(!host||!grid)return;albumId=host.dataset.albumId;if(!albumId)return;sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});active='all';selected.clear();mode=false;render(); }
 async function act(action,payload){try{await rpc('pl_demo_album_organize',{p_album_id:albumId,p_action:action,p_payload:payload});sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});render()}catch(e){alert('Não foi possível salvar: '+e.message)}}
+async function moveSection(index,direction){const j=index+direction;if(j<0||j>=sections.length)return;const previous=[...sections];const reordered=[...sections];[reordered[index],reordered[j]]=[reordered[j],reordered[index]];sections=reordered;render();try{const professional=$('#pl-album-content')?.dataset.professional==='true';if(!professional)throw new Error('Edição disponível apenas em álbuns profissionais.');for(let i=0;i<reordered.length;i++){const {error}=await window.plSupabase.from('album_secoes').update({ordem:i+1}).eq('id',reordered[i].id).eq('album_id',albumId);if(error)throw error;}sections=await rpc('pl_demo_album_sections',{p_album_id:albumId});render();}catch(e){sections=previous;render();alert('Não foi possível salvar a ordem das seções: '+e.message)}}
 function cards(){return [...$('#pl-photo-grid').querySelectorAll('.pl-photo-card')]}
 function photos(){return cards().map(c=>({el:c,id:c.querySelector('[data-preview]')?.dataset.preview})).filter(x=>x.id)}
 async function sectionsMap(){return await rpc('pl_demo_album_section_members',{p_album_id:albumId})}
@@ -80,13 +81,14 @@ const sectionButtons=[{id:'all',nome:'Todas'},{id:'none',nome:'Sem seção'},...
     '</span>';
 }).join('');
 panel.innerHTML='<div class="pl-sections" aria-label="Seções do álbum">'+sectionButtons+
-  '<button type="button" id="pl-section-add">＋ Nova seção</button></div>'+
+  '<button type="button" id="pl-section-add">＋ Nova seção</button><button type="button" id="pl-section-sort">'+(sectionSorting?'Concluir ordem':'☷ Ordenar seções')+'</button></div>'+(sectionSorting?'<div class="pl-section-sort-list">'+sections.map((sec,i)=>'<div class="pl-section-sort-row"><span>'+esc(sec.nome)+'</span><button type="button" data-sort-up="'+i+'" '+(i===0?'disabled':'')+' aria-label="Subir seção">↑</button><button type="button" data-sort-down="'+i+'" '+(i===sections.length-1?'disabled':'')+' aria-label="Descer seção">↓</button></div>').join('')+'</div>':'')+
   '<div class="pl-bulk"><button id="pl-bulk-mode">'+(mode?'Cancelar seleção':'Selecionar fotos')+
   '</button><button id="pl-order-mode">'+(reorder?'Concluir organização':'Reorganizar fotos')+
   '</button>'+(selected.size?'<strong>'+selected.size+' selecionadas</strong><select id="pl-bulk-move"><option value="">Mover para…</option><option value="none">Sem seção</option>'+
   sections.map(sec=>'<option value="'+esc(sec.id)+'">'+esc(sec.nome)+'</option>').join('')+'</select>':'')+'</div>';
 grid.before(panel);
 panel.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{active=b.dataset.section;selected.clear();mode=false;render()});
+$('#pl-section-sort').onclick=()=>{sectionSorting=!sectionSorting;render()};panel.querySelectorAll('[data-sort-up],[data-sort-down]').forEach(b=>b.onclick=()=>moveSection(Number(b.dataset.sortUp??b.dataset.sortDown),b.hasAttribute('data-sort-up')?-1:1));
 $('#pl-section-add').onclick=()=>{const nome=prompt('Nome da seção');if(nome?.trim())act('create',{nome:nome.trim()})};
 $('#pl-bulk-mode').onclick=()=>{mode=!mode;reorder=false;selected.clear();render()};$('#pl-order-mode').onclick=()=>{reorder=!reorder;mode=false;selected.clear();render()};
 $('#pl-bulk-move')?.addEventListener('change',async e=>{if(e.target.value){await act('move',{ids:[...selected],secao_id:e.target.value==='none'?null:e.target.value});selected.clear();mode=false;render()}});
