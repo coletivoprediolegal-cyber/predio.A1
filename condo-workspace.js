@@ -53,9 +53,47 @@ function addButton(){
 function list(items,showAdd=true){
  return (showAdd?'<div class="cw-list-actions"><span>'+items.length+' assunto(s)</span>'+addButton()+'</div>':'')+(items.length?'<div class="cw-mini-list">'+items.map(itemRow).join('')+'</div>':'<p class="cw-empty">Nenhum assunto nesta seleção.</p>')+(state.form?form():'');
 }
+
+function documentPanel(local,subject){
+ if(!local)return '';
+ return '<details class="cw-albums-fold" open><summary>Documentos da unidade</summary><div class="cw-albums-body" data-doc-panel data-local="'+esc(local)+'" data-subject-id="'+esc(subject||'')+'"><p>Carregando documentos…</p></div></details>';
+}
+async function mountDocuments(){
+ const panel=root.querySelector('[data-doc-panel]');if(!panel)return;
+ const local=panel.dataset.local,subject=panel.dataset.subjectId,jobId=job.id;
+ const db=sb(),bucket=db.storage.from('predio-legal-documentos');
+ try{
+  const result=await db.from('documentos_unidades').select('*,documentos_unidades_vinculos(id,mini_job_id,feed_id)').eq('local_id',local).order('criado_em',{ascending:false});
+  if(result.error)throw result.error;
+  const docs=result.data||[], subjectsForUnit=mini().filter(m=>m.local_id===local&&!m.demonstracao);
+  const visible=subject?docs.filter(d=>d.documentos_unidades_vinculos.some(v=>v.mini_job_id===subject)):docs;
+  let feed=[];
+  if(subject&&isAdmin){const f=await db.from('job_feed').select('id,conteudo,criado_em').eq('mini_job_id',subject).order('criado_em',{ascending:false});if(!f.error)feed=f.data||[];}
+  if(!panel.isConnected)return;
+  const subjectOptions=subjectsForUnit.map(m=>'<option value="'+esc(m.id)+'" '+(m.id===subject?'selected':'')+'>'+esc(m.titulo)+'</option>').join('');
+  const feedOptions=feed.map(f=>'<option value="'+esc(f.id)+'">'+esc(new Date(f.criado_em).toLocaleDateString('pt-BR')+' · '+String(f.conteudo||'').slice(0,90))+'</option>').join('');
+  panel.innerHTML=(visible.length?visible.map(d=>'<div class="cw-album-link"><button type="button" data-doc-open="'+esc(d.id)+'">'+esc(d.nome)+' <small>· '+esc(new Date(d.criado_em).toLocaleDateString('pt-BR'))+' · '+esc(d.visibilidade)+'</small></button></div>').join(''):'<p class="cw-empty">Nenhum documento vinculado.</p>')+(isAdmin?'<form class="cw-form" data-doc-upload><label>Arquivo<input type="file" name="arquivo" required></label><label>Visibilidade<select name="visibilidade"><option value="interno">Interno</option><option value="geral">Compartilhado com usuários autorizados</option></select></label><label>Assunto<select name="assunto"><option value="">Somente apartamento</option>'+subjectOptions+'</select></label>'+(subject&&feedOptions?'<label>Registro do histórico (opcional)<select name="feed"><option value="">Sem registro específico</option>'+feedOptions+'</select></label>':'')+'<button type="submit" class="cw-save">Anexar documento</button></form>'+(docs.length&&subject?'<form class="cw-form" data-doc-link><label>Vincular arquivo existente<select name="documento" required><option value="">Selecione</option>'+docs.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.nome)+'</option>').join('')+'</select></label>'+(feedOptions?'<label>Registro do histórico<select name="feed"><option value="">Somente assunto</option>'+feedOptions+'</select></label>':'')+'<button type="submit" class="cw-save">Vincular</button></form>':''):'')+'<p data-doc-status role="status"></p>';
+  const status=panel.querySelector('[data-doc-status]');
+  const fail=e=>{status.textContent=e.message||String(e)};
+  panel.querySelectorAll('[data-doc-open]').forEach(b=>b.onclick=async()=>{try{const d=docs.find(x=>x.id===b.dataset.docOpen);const a=await bucket.createSignedUrl(d.caminho,120,{download:d.nome});if(a.error)throw a.error;const link=document.createElement('a');link.href=a.data.signedUrl;link.rel='noopener';link.target='_blank';link.click();}catch(e){fail(e)}});
+  const linkDoc=async(id,m,f)=>{if(!m)return;const x=await db.from('documentos_unidades_vinculos').insert({documento_id:id,mini_job_id:m,feed_id:f||null});if(x.error&&x.error.code!=='23505')throw x.error;};
+  panel.querySelector('[data-doc-upload]')?.addEventListener('submit',async e=>{
+   e.preventDefault();const form=e.target,button=form.querySelector('button');button.disabled=true;status.textContent='Enviando…';
+   const f=new FormData(form),file=f.get('arquivo'),id=crypto.randomUUID(),path=local+'/'+id+'/'+file.name.replace(/[\\/]/g,'_');
+   let saved=false,uploaded=false;
+   try{if(file.size>52428800)throw new Error('Limite de 50 MB por arquivo.');
+    const row=await db.from('documentos_unidades').insert({id,local_id:local,job_id:jobId,nome:file.name,caminho:path,mime:file.type,tamanho:file.size,visibilidade:f.get('visibilidade')});if(row.error)throw row.error;saved=true;
+    const up=await bucket.upload(path,file,{upsert:false});if(up.error)throw up.error;uploaded=true;
+    await linkDoc(id,f.get('assunto'),f.get('assunto')===subject?f.get('feed'):null);await mountDocuments();
+   }catch(err){if(saved&&!uploaded)await db.from('documentos_unidades').delete().eq('id',id);fail(err);button.disabled=false;}
+  });
+  panel.querySelector('[data-doc-link]')?.addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),button=e.target.querySelector('button');button.disabled=true;try{await linkDoc(f.get('documento'),subject,f.get('feed'));await mountDocuments();}catch(err){fail(err);button.disabled=false;}});
+ }catch(e){if(panel.isConnected)panel.innerHTML='<p class="cw-error">'+esc(e.message||String(e))+'</p>';}
+}
+
 function unitView(){
  const u=selectedUnit();if(!u){state.unit=null;return '<p class="cw-empty">Unidade não encontrada.</p>'}
- return '<div class="cw-subheading"><div><h2>'+esc(labelLocal(u.id))+'</h2><p>'+esc(u.tipo_unidade||'Unidade privativa')+'</p></div></div>'+filterBar()+list(currentItems());
+ return '<div class="cw-subheading"><div><h2>'+esc(labelLocal(u.id))+'</h2><p>'+esc(u.tipo_unidade||'Unidade privativa')+'</p></div></div>'+filterBar()+list(currentItems())+documentPanel(u.id,null);
 }
 function towerView(){
  const t=towers().find(x=>x.id===state.tower);if(!t)return '<p class="cw-empty">Torre não encontrada.</p>';
@@ -93,13 +131,14 @@ function detail(){
  const save='';
  const albumRows=links.length?links.map(a=>'<div class="cw-album-link"><button data-album="'+esc(a.id)+'">'+esc(a.titulo)+' <span>›</span></button>'+(isAdmin?'<button aria-label="Desvincular álbum" data-unlink="'+esc(a.id)+'">×</button>':'')+'</div>').join(''):'<p class="cw-empty">Nenhum álbum vinculado ainda.</p>';
  const albumActions=isAdmin?'<div class="cw-album-actions"><button data-action="new-album">＋ Criar álbum</button>'+(options.length?'<select id="cw-album-pick"><option value="">Vincular álbum existente...</option>'+options.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.titulo)+'</option>').join('')+'</select>':'')+'</div>':'';
- return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><details class="cw-albums-fold"><summary>Álbuns vinculados'+(links.length?' ('+links.length+')':'')+'</summary><div class="cw-albums-body">'+albumRows+albumActions+'</div></details></div>';
+ return '<div class="cw-detail"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><h2>'+esc(m.titulo)+'</h2><div class="cw-detail-meta">'+esc(m.area==='privativa'?labelLocal(m.local_id):'Áreas comuns')+'</div>'+statusControl+notes+save+'<section id="cw-mini-history" data-mini="'+esc(m.id)+'"></section><details class="cw-albums-fold"><summary>Álbuns vinculados'+(links.length?' ('+links.length+')':'')+'</summary><div class="cw-albums-body">'+albumRows+albumActions+'</div></details>'+documentPanel(m.local_id,m.id)+'</div>';
 }
 function render(){
  if(!root)return;
  const heading=state.detail?'<div class="cw-jobhead cw-jobhead-small"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' · '+esc(job.titulo)+'</div></div>':'<div class="cw-jobhead"><div class="cw-kicker">'+esc(job.cliente||'Condomínio')+' / JOB</div><h1>'+esc(job.titulo)+'</h1></div>';
  root.innerHTML='<div class="cw-app">'+heading+breadcrumb()+(errorText?'<p class="cw-error" role="alert">'+esc(errorText)+'</p>':'')+(state.detail?detail():!state.area?overview():subjectStrip()+(state.area==='comum'?common():privativa()))+'</div>';
  bind();
+ mountDocuments();
  if(state.detail&&window.PLMiniHistory)window.PLMiniHistory.mount(root,job.id,state.detail,isAdmin).catch(e=>console.warn('Histórico do assunto',e));
 }
 async function reload(){
