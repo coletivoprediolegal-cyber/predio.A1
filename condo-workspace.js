@@ -2,7 +2,7 @@
 'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const titlecase={planejado:'Planejado',em_andamento:'Em andamento',concluido:'Concluído',suspenso:'Suspenso'};
-const state={area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:'',unitFilter:'todos',unitFilter:'todos'};
+const state={area:null,tab:'apartamento',tower:null,unit:null,subject:null,filter:'todos',detail:null,form:false,search:'',unitFilter:'todos'};
 let root=null,job=null,workspace={locais:[],mini_jobs:[],albuns:[]},allAlbums=[],pendingByUnit={},busy=false,errorText='',isAdmin=false;
 const sb=()=>window.plSupabase;
 const mini=()=>workspace.mini_jobs||[];
