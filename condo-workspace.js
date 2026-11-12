@@ -13,7 +13,7 @@ const type=l=>String(l.tipo||'').toLowerCase();
 const towers=()=>locais().filter(l=>type(l).includes('torre')||type(l).includes('bloco')&&!l.numero).sort((a,b)=>sorted(a.bloco,b.bloco));
 const units=tower=>locais().filter(l=>l.local_pai_id===tower&&l.numero).sort((a,b)=>sorted(a.numero,b.numero));
 const labelLocal=id=>{const l=locais().find(x=>x.id===id);return l?(l.numero?'Apto '+l.numero+' · Torre '+l.bloco:l.nome):'Sem unidade definida'};
-const currentItems=()=>mini().filter(m=>m.area===state.area&&(state.area!=='privativa'||state.tab==='assunto'?(state.subject?m.assunto===state.subject:true):(state.unit?m.local_id===state.unit:state.tower?units(state.tower).some(l=>l.id===m.local_id):true))&&(state.filter==='todos'||m.status===state.filter));
+const currentItems=()=>mini().filter(m=>m.area===state.area&&(state.area!=='privativa'||state.tab==='assunto'?(state.subject?shortSubjectLabel(m)===state.subject:true):(state.unit?m.local_id===state.unit:state.tower?units(state.tower).some(l=>l.id===m.local_id):true))&&(state.filter==='todos'||m.status===state.filter));
 const subjects=()=>[...new Set(mini().filter(m=>m.area===state.area).map(m=>m.assunto))].sort(sorted);
 function breadcrumb(){
  const nodes=[['Monitoramento','overview']];
@@ -46,11 +46,13 @@ function shortSubjectLabel(m){
  if(/manutenção/.test(v))return 'Manutenção';
  return (a||t).trim().split(/\s+/).slice(0,2).join(' ').slice(0,22)||'Assunto';
 }
+function groupedSubjects(){return [...new Set(mini().filter(m=>m.area===state.area).map(shortSubjectLabel))].sort(sorted)}
+function topicButtons(){return groupedSubjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')}
 function subjectStrip(){
- const items=mini().filter(m=>m.area===state.area).sort((a,b)=>Number(b.status==='em_andamento')-Number(a.status==='em_andamento')||sorted(a.titulo,b.titulo));
+ const items=groupedSubjects().map(label=>({label,records:mini().filter(m=>m.area===state.area&&shortSubjectLabel(m)===label)}));
  if(!items.length)return '';
  return '<section class="cw-subject-strip" aria-label="Acesso rápido aos assuntos"><div class="cw-subject-strip-head"><h2>Assuntos</h2><button type="button" data-subject-search-toggle aria-label="Buscar assunto">⌕ Buscar</button></div><input class="cw-subject-search" data-subject-search type="search" placeholder="Localizar assunto…" aria-label="Localizar assunto" hidden><div class="cw-subject-rail" role="group" aria-label="Assuntos; deslize lateralmente">'+
- '<button class="cw-subject-pill cw-subject-all" type="button" data-subject-all>Todos</button>'+items.map(m=>'<button type="button" class="cw-subject-pill" data-detail="'+esc(m.id)+'" data-subject-title="'+esc(m.titulo.toLocaleLowerCase('pt-BR'))+'">'+esc(shortSubjectLabel(m))+(m.status==='em_andamento'?'<span class="cw-subject-dot" aria-label="Em andamento"></span>':'')+'</button>').join('')+'</div></section>';
+ '<button class="cw-subject-pill cw-subject-all" type="button" data-subject-all>Todos</button>'+items.map(g=>'<button type="button" class="cw-subject-pill" data-subject="'+esc(g.label)+'" data-subject-title="'+esc(g.label.toLocaleLowerCase('pt-BR'))+'">'+esc(g.label)+' ('+g.records.length+')'+(g.records.some(m=>m.status==='em_andamento')?'<span class="cw-subject-dot" aria-label="Em andamento"></span>':'')+'</button>').join('')+'</div></section>';
 }
 function filterBar(){
  return '<div class="cw-filters" aria-label="Filtrar por andamento">'+[['todos','Todos'],['em_andamento','Em andamento'],['planejado','Planejados'],['concluido','Concluídos'],['suspenso','Suspensos']].map(p=>'<button data-filter="'+p[0]+'" class="'+(state.filter===p[0]?'selected':'')+'">'+p[1]+'</button>').join('')+'</div>';
@@ -131,10 +133,10 @@ function privativa(){
    return '<button data-tower="'+esc(t.id)+'"><strong>'+esc(t.bloco||t.nome)+'</strong><small>'+units(t.id).length+' aptos · '+count+' assuntos</small></button>';
   }).join('')+'</div><p class="cw-hint">Selecione a torre e depois o apartamento para consultar todas as intervenções da unidade.</p>';
  }
- return tabs+'<h2 class="cw-section-label">Consultar por tópico</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos os tópicos</button>'+subjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')+'</div>'+filterBar()+list(currentItems());
+ return tabs+'<h2 class="cw-section-label">Consultar por tópico</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos os tópicos</button>'+topicButtons()+'</div>'+filterBar()+list(currentItems());
 }
 function common(){
- return '<h2 class="cw-section-label">Áreas comuns · tópicos</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos</button>'+subjects().map(x=>'<button data-subject="'+esc(x)+'" class="'+(state.subject===x?'selected':'')+'">'+esc(x)+'</button>').join('')+'</div>'+filterBar()+list(currentItems());
+ return '<h2 class="cw-section-label">Áreas comuns · tópicos</h2><div class="cw-topics"><button data-subject="" class="'+(!state.subject?'selected':'')+'">Todos</button>'+topicButtons()+'</div>'+filterBar()+list(currentItems());
 }
 function overview(){
  const active=mini().filter(m=>m.status==='em_andamento'&&!m.demonstracao).length;
