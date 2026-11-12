@@ -31,6 +31,21 @@ function itemRow(m){
  const amount=workspace.albuns.filter(a=>a.mini_job_id===m.id).length;
  return '<button class="cw-mini" data-detail="'+esc(m.id)+'"><div class="cw-mini-main"><div class="cw-mini-eyebrow">'+esc(m.assunto)+(m.demonstracao?' · EXEMPLO':'')+'</div><strong>'+esc(m.titulo)+'</strong><small>'+esc(m.area==='privativa'?labelLocal(m.local_id):'Área comum')+(amount?' · '+amount+' álbum(ns)':'')+'</small></div><span class="cw-status cw-'+esc(m.status)+'">'+esc(titlecase[m.status]||m.status)+'</span><span class="cw-chevron">›</span></button>';
 }
+function shortSubjectLabel(m){
+ const t=String(m.titulo||''),a=String(m.assunto||'');
+ const v=(t+' '+a).toLocaleLowerCase('pt-BR');
+ if(/ar[- ]condicionado|climatiza/.test(v))return 'AC';
+ if(/esgoto/.test(t.toLowerCase()))return 'Esgoto';
+ if(/registro hidráulico/.test(v))return 'Registro';
+ if(/vazament|gotejamento/.test(t.toLowerCase()))return 'Vazamento';
+ if(/infiltra/.test(t.toLowerCase()))return 'Infiltração';
+ if(/armadura|laje|estrutura/.test(t.toLowerCase()))return 'Estrutura';
+ if(/fachada|reparo externo|pintura externa/.test(t.toLowerCase()))return 'Fachada';
+ if(/reforma|contrapiso|autorização de serviços|obra/.test(t.toLowerCase()))return 'Reforma';
+ if(/perícia|processo judicial/.test(v))return 'Perícia';
+ if(/manutenção/.test(v))return 'Manutenção';
+ return (a||t).trim().split(/\s+/).slice(0,2).join(' ').slice(0,22)||'Assunto';
+}
 function subjectStrip(){
  const items=mini().filter(m=>m.area===state.area).sort((a,b)=>Number(b.status==='em_andamento')-Number(a.status==='em_andamento')||sorted(a.titulo,b.titulo));
  if(!items.length)return '';
