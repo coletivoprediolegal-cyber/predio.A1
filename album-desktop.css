@@ -32,3 +32,5 @@
 @media(min-width:1920px){
   #pl-album .pl-photo-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:9px}
 }
+
+.pl-section-sort-list{padding:8px 0}.pl-section-sort-row{display:flex;align-items:center;gap:8px;padding:6px 2px}.pl-section-sort-row span{flex:1}.pl-section-sort-row button{min-width:36px;min-height:34px;border:1px solid #b7b0a5;border-radius:8px;background:transparent;color:inherit}
