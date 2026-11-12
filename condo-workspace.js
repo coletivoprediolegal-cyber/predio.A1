@@ -174,8 +174,9 @@ function bind(){
  root.querySelectorAll('[data-unit-filter]').forEach(b=>b.onclick=()=>{state.unitFilter=b.dataset.unitFilter;render()});
  root.querySelectorAll('[data-toggle-obra]').forEach(b=>b.onclick=()=>guarded(async()=>{
   const u=locais().find(x=>x.id===b.dataset.toggleObra);if(!u)throw new Error('Apartamento não encontrado');
-  const {error}=await sb().from('locais').update({obra_ativa:!u.obra_ativa}).eq('id',u.id).eq('empreendimento_id',u.empreendimento_id);
+  const {data,error}=await sb().from('locais').update({obra_ativa:!u.obra_ativa}).eq('id',u.id).select('id');
   if(error)throw error;
+  if(!data||!data.length)throw new Error('A atualização não foi autorizada ou não encontrou o apartamento');
  }));
  root.querySelectorAll('[data-unit]').forEach(b=>b.onclick=()=>{state.unit=b.dataset.unit;state.filter='todos';render()});
  root.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{state.subject=b.dataset.subject||null;state.form=false;render()});
