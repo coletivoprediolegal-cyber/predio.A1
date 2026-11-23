@@ -283,3 +283,51 @@
 .rf-layout-2 .rf-caption-section{display:block;color:#26354b;font-weight:700;font-size:9pt;line-height:1.2;margin-bottom:.5mm;white-space:normal;overflow-wrap:anywhere}
 
 .rf-section-organizer{border:1px solid #d7d0c5;border-radius:12px;padding:12px;margin:8px 0 16px}.rf-section-organizer summary{cursor:pointer;font-weight:600}.rf-section-organizer p{font-size:12px;opacity:.7}.rf-section-order-row,.rf-section-actions{display:flex;align-items:center;gap:8px;margin:7px 0}.rf-section-order-row span{flex:1}.rf-section-order-row button,.rf-section-actions button{min-height:34px;padding:6px 10px;border:1px solid #bdb4a8;border-radius:8px;background:transparent;color:inherit}.rf-section-actions{flex-wrap:wrap}
+
+/* Biblioteca de relatórios independentes dentro do álbum (nov/2026). */
+.rf-dialog .rf-report-library{
+ margin:12px 0 18px;
+ padding:14px 16px;
+ border:1px solid #d9d0c5;
+ background:rgba(255,250,243,.74);
+ border-radius:14px;
+ box-shadow:0 2px 9px rgba(34,43,54,.04);
+}
+.rf-dialog .rf-library-title{
+ display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+ gap:6px 12px;margin-bottom:10px;color:#26354b;
+ font:600 15px/1.3 'Instrument Sans',Arial,sans-serif;
+}
+.rf-dialog #rf-current-report{font-size:12px;font-weight:400;color:#7c6f5d}
+.rf-dialog .rf-report-library .rf-save-settings{border:0;padding:0 0 10px}
+.rf-dialog .rf-report-library .rf-save-settings input{width:100%;max-width:580px}
+.rf-dialog .rf-report-library .rf-advanced-save{gap:8px;align-items:stretch}
+.rf-dialog .rf-report-library .rf-advanced-save button{
+ min-height:39px;padding:8px 12px;
+ background:#fff;border:1px solid #c9bdae;color:#26354b;
+ border-radius:10px;cursor:pointer;
+}
+.rf-dialog .rf-report-library .rf-advanced-save .rf-primary{
+ background:#26354b;color:#fff;border-color:#26354b;
+}
+.rf-dialog .rf-report-library .rf-advanced-save button:disabled{opacity:.55;cursor:wait}
+.rf-dialog .rf-library-help{font:400 11px/1.45 'Instrument Sans',Arial,sans-serif;color:#827a70;margin:10px 0 0}
+.rf-dialog .rf-saved-list{margin:8px 0 14px;padding:12px;border:1px solid #ded6cb;border-radius:12px;background:#fffdf9}
+.rf-dialog .rf-saved-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.rf-dialog .rf-saved-head strong{font:600 14px 'Instrument Sans',Arial,sans-serif;color:#26354b}
+.rf-dialog .rf-saved-head button{font-size:12px}
+.rf-dialog .rf-saved-list .rf-saved-report{
+ display:flex;flex-direction:column;align-items:flex-start;width:100%;
+ gap:3px;margin:4px 0;padding:10px 12px;
+ border:1px solid #e5ded5;border-radius:9px;background:#fff;
+ text-align:left;cursor:pointer;
+}
+.rf-dialog .rf-saved-report strong{font-size:13px;color:#26354b}
+.rf-dialog .rf-saved-report span{font-size:11px;color:#8e8170}
+.rf-dialog .rf-saved-report:hover,.rf-dialog .rf-saved-report:focus-visible{border-color:#9e8b70;background:#faf5ed}
+@media(max-width:600px){
+ .rf-dialog .rf-report-library{padding:12px}
+ .rf-dialog .rf-report-library .rf-advanced-save{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .rf-dialog .rf-report-library .rf-advanced-save button{white-space:normal;font-size:12px}
+ .rf-dialog .rf-library-title{align-items:flex-start}
+}
