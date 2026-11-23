@@ -4,7 +4,7 @@
  const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
- let albumChanged=false;
+ let albumChanged=false,albumBaseline=[],sectionOrderBaseline=[];
  let showPhotoNotes=true,showManifestations=true,showSectionNames=true;let sectionOrder=[],albumItemOrder=[];
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
@@ -139,11 +139,13 @@
      ambiente_nome:link.locais?.local_pai_id?(link.locais?.nome||''):'',manifestacao_observada:link.manifestacao_observada||'',
      incluir:!([true,'true'].includes(f.metadados?.oculta_relatorio)||f.oculta_relatorio===true),
      legenda:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',
-     observacao:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',destaque_no_relatorio:!!f.destaque,
+     observacao:f.observacao_tecnica||f.observacao||f.legenda||f.metadados?.observacao||'',destaque_no_relatorio:!!f.destaque,nivel_anomalia_relatorio:f.nivel_anomalia||'',
      fotos_por_pagina_override:null
     });
    }
    albumItemOrder=state.items.map(i=>i.fotografia_id);
+   albumBaseline=state.items.map(i=>({...i}));
+   sectionOrderBaseline=sectionOrder.map(s=>({...s}));
    const visibleTotal=state.items.filter(i=>i.incluir).length;
    state.layout=visibleTotal<=2?2:visibleTotal<=4?4:visibleTotal<=6?6:visibleTotal<=9?9:12;
    dirty=false;render();
@@ -167,7 +169,7 @@
   previewIndex=0;editFilter='all';editQuery='';editsVisible=30;
   const total=state.items.length,shown=countIncluded();
   const highlights=state.items.filter(i=>i.incluir&&i.destaque_no_relatorio).length;
-  const anomalies=state.items.filter(i=>i.incluir&&i.source.nivel_anomalia).length;
+  const anomalies=state.items.filter(i=>i.incluir&&i.nivel_anomalia_relatorio).length;
   dialog.innerHTML='<div class="rf-editor-head"><button type="button" id="rf-close" class="rf-back">‹ Voltar ao álbum</button>'+
    '<h1>Relatório fotográfico</h1>'+
    '<p class="rf-source">'+escape(state.album.titulo)+' · <span id="rf-photo-count">'+shown+' de '+total+' fotos</span>'+
@@ -178,14 +180,18 @@
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
    '<span id="rf-text-hint"></span></div>'+
    '<p class="rf-message" role="status" aria-live="polite"></p>'+
+   (!state.demo?'<section class="rf-report-library" aria-label="Meus relatórios">'+
+   '<div class="rf-library-title"><strong>Meus relatórios</strong><span id="rf-current-report">'+(state.id?'Editando: '+escape(state.titulo):'Novo relatório — ainda não salvo')+'</span></div>'+
+   '<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'" placeholder="Ex.: Defesa Civil, Condomínio, Construtora"></label></div>'+
+   '<div class="rf-advanced-save"><button id="rf-load" type="button">Abrir relatório</button><button id="rf-new" type="button">Novo relatório</button><button id="rf-save" type="button" class="rf-primary">Salvar</button><button id="rf-save-as" type="button">Salvar como novo</button></div>'+
+   '<p class="rf-library-help">Cada relatório mantém seleção, ordem, legendas e marcações próprias, sem copiar ou modificar as fotos do álbum.</p>'+
+   '</section>':'')+
    '<section class="rf-preview-area" aria-label="Prévia do relatório"><div class="rf-preview-top">'+
    '<strong>Prévia A4</strong><div class="rf-page-tools"><button id="rf-page-prev" type="button" aria-label="Página anterior">‹</button>'+
    '<span id="rf-preview-count"></span><button id="rf-page-next" type="button" aria-label="Próxima página">›</button></div></div>'+
    '<div class="rf-preview" aria-label="Prévia da página selecionada"></div></section>'+
    '<details class="rf-advanced" id="rf-advanced"><summary>Ajustes opcionais <span>Fotos e observações</span></summary>'+
    '<div class="rf-advanced-inner"><details class="rf-section-organizer"><summary>☷ Organizar seções</summary><p>Ordem apenas deste PDF; o álbum não será alterado.</p><div id="rf-section-order"></div><div class="rf-section-actions"><button type="button" id="rf-section-apply">Organizar por seções</button><button type="button" id="rf-section-reset">Restaurar ordem do álbum</button></div></details><p>Arraste a foto para ordenar · ★ Destaque · ⚠ Anomalia</p>'+
-   (!state.demo?'<div class="rf-save-settings"><label>Nome do relatório<input type="text" id="rf-title" maxlength="160" value="'+escape(state.titulo)+'"></label>'+
-   '<div class="rf-advanced-save"><button id="rf-save" type="button">Salvar relatório</button><button id="rf-load" type="button">Abrir relatório salvo</button></div></div>':'')+
    '<div class="rf-edit-tools"><label>Exibir <select id="rf-edit-filter"><option value="all">Todas as fotos</option><option value="highlight">Destaques</option>'+
    '<option value="anomaly">Anomalias</option><option value="note">Com observação</option><option value="hidden">Ocultas</option></select></label>'+
    '<label>Buscar foto <input id="rf-photo-search" type="search" placeholder="Número ou texto"></label></div>'+
@@ -194,12 +200,12 @@
   dialog.querySelector('#rf-close').onclick=close;
   renderSectionOrder();dialog.querySelector('#rf-section-apply').onclick=organizeForPDF;dialog.querySelector('#rf-section-reset').onclick=()=>{restoreAlbumOrder();};
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
-  dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;preview();};
+  dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;dirty=true;preview();};
   dialog.querySelector('#rf-pdf').onclick=()=>exportPDF(false);
   dialog.querySelector('#rf-pdf-light').onclick=()=>exportPDF(true);
-  dialog.querySelector('#rf-show-manifestations').onchange=e=>{showManifestations=e.target.checked;preview()};
-   dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;preview()};
-  dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;preview()};
+  dialog.querySelector('#rf-show-manifestations').onchange=e=>{showManifestations=e.target.checked;dirty=true;preview()};
+   dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;dirty=true;preview()};
+  dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;dirty=true;preview()};
   dialog.querySelector('#rf-page-prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);preview()};
   dialog.querySelector('#rf-page-next').onclick=()=>{previewIndex=Math.min(totalPages()-1,previewIndex+1);preview()};
   dialog.querySelector('#rf-advanced').addEventListener('toggle',e=>{if(e.target.open)rows()});
@@ -210,6 +216,8 @@
    dialog.querySelector('#rf-title').oninput=e=>{state.titulo=e.target.value;dirty=true};
    dialog.querySelector('#rf-save').onclick=save;
    dialog.querySelector('#rf-load').onclick=load;
+   dialog.querySelector('#rf-new').onclick=newReport;
+   dialog.querySelector('#rf-save-as').onclick=saveAs;
   }
   preview();
  }
@@ -224,7 +232,7 @@
  function filteredItems(){
   return state.items.map((item,index)=>({item,index})).filter(({item})=>{
    if(editFilter==='highlight'&&!item.destaque_no_relatorio)return false;
-   if(editFilter==='anomaly'&&!item.source.nivel_anomalia)return false;
+   if(editFilter==='anomaly'&&!item.nivel_anomalia_relatorio)return false;
    if(editFilter==='note'&&!item.legenda?.trim())return false;
    if(editFilter==='hidden'&&item.incluir)return false;
    return !editQuery||String(item.numero).includes(editQuery)||(item.legenda||'').toLowerCase().includes(editQuery);
@@ -236,33 +244,23 @@
   return level==='amarela'?'Anomalia amarela; tocar para vermelha':
          level==='vermelha'?'Anomalia vermelha; tocar para remover':'Sem anomalia; tocar para marcar';
  }
- async function editAlbumPhoto(item,action){
-  if(reportWritePending)return;
-  const original=action==='anomalia'?item.source.nivel_anomalia:!!item.destaque_no_relatorio;
-  const value=action==='anomalia'?nextAnomaly(original):!original;
-  reportWritePending=true;
-  if(action==='anomalia')item.source.nivel_anomalia=value;
-  else{item.destaque_no_relatorio=value;item.source.destaque=value}
-  try{
-   preview();rows();
-   const payload=action==='anomalia'?{id:item.fotografia_id,nivel:value}:{id:item.fotografia_id,destaque:value};
-   const result=await sb.rpc('pl_report_album_edit',{p_album_id:state.album.id,p_action:action,p_payload:payload});
-   if(result.error||!result.data?.ok)throw result.error||new Error('Não foi possível confirmar a alteração');
-   albumChanged=true;
-   error({message:''});
-  }catch(e){
-   if(action==='anomalia')item.source.nivel_anomalia=original;
-   else{item.destaque_no_relatorio=original;item.source.destaque=original}
-   error({message:'Não foi possível salvar a classificação: '+(e.message||e)});
-  }finally{reportWritePending=false;preview();rows()}
+ function editReportPhoto(item,action){
+  if(busy||reportWritePending)return;
+  if(action==='anomalia'){
+   item.nivel_anomalia_relatorio=nextAnomaly(item.nivel_anomalia_relatorio||null)||'';
+  }else{
+   item.destaque_no_relatorio=!item.destaque_no_relatorio;
+  }
+  dirty=true;
+  preview();rows();
  }
- function filteredRows(){
+  function filteredRows(){
   const visible=filteredItems();
   return {visible,shown:visible.slice(0,editsVisible)};
  }
  function rowMarkup(item,i){
   const notes=!!item.legenda?.trim(),highlight=!!item.destaque_no_relatorio;
-  const anomaly=item.source.nivel_anomalia||null;
+  const anomaly=item.nivel_anomalia_relatorio||null;
   const anomalyCls=anomaly==='vermelha'?'rf-anomaly-red':anomaly==='amarela'?'rf-anomaly-yellow':'';
   return '<article class="rf-row" data-index="'+i+'" data-photo-id="'+escape(item.fotografia_id)+'">'+
    '<button type="button" class="rf-row-thumb" data-drag-handle title="Segure a foto e arraste para reorganizar" aria-label="Segurar e arrastar foto '+escape(item.numero)+'">'+
@@ -299,7 +297,7 @@
    state.items[index].legenda=e.target.value;
    dirty=true;preview();
   };
-  row.querySelectorAll('[data-album-action]').forEach(button=>button.onclick=()=>editAlbumPhoto(state.items[index],button.dataset.albumAction));
+  row.querySelectorAll('[data-album-action]').forEach(button=>button.onclick=()=>editReportPhoto(state.items[index],button.dataset.albumAction));
   row.querySelector('[data-drag-handle]').addEventListener('pointerdown',startReportDrag);
   row.querySelector('img').draggable=false;
  }
@@ -423,25 +421,10 @@
   if(new Set(indices).size!==indices.length){rows();return}
   const original=state.items.slice();
   sorted.forEach((slot,n)=>{state.items[slot]=original[indices[n]]});
-  const oldNumbers=[...original].map(item=>item.numero);
-  reportWritePending=true;
-  try{
-   preview();rows();
-   const result=await sb.rpc('pl_report_album_edit',{
-    p_album_id:state.album.id,p_action:'reorder',
-    p_payload:{ids:state.items.map(item=>item.fotografia_id)}
-   });
-   if(result.error||!result.data?.ok)throw result.error||new Error('Falha ao gravar a ordem');
-   // Maintain the album's position-based numbering, including gaps from deleted photos.
-   const positions=oldNumbers.slice().sort((a,b)=>Number(a)-Number(b));
-   state.items.forEach((item,idx)=>{item.numero=positions[idx]});
-   if(state.id)dirty=true;
-   albumChanged=true;
-   error({message:''});
-  }catch(err){
-   state.items=original;
-   error({message:'A ordem anterior foi restaurada: '+(err.message||err)});
-  }finally{reportWritePending=false;rows();preview()}
+  // A reorganização afeta apenas o relatório aberto, nunca o álbum original.
+  dirty=true;
+  error({message:'Ordem alterada somente neste relatório. Clique em Salvar para conservar.'});
+  preview();rows();
  }
  document.addEventListener('pointermove',onReportDragMove,{passive:false});
  document.addEventListener('pointerup',e=>{commitReportDrag(e).catch(console.error)});
@@ -458,7 +441,7 @@
    const compactSlashes=text=>String(text||'').replace(/\s*\/\s*/g,'/').trim();
    const fullObservation=text=>String(text||'').trim();
    const cells=p.items.map(i=>{
-    const anomaly=i.source.nivel_anomalia;
+    const anomaly=i.nivel_anomalia_relatorio;
     const note=fullObservation(i.legenda||'');
     // A seção aparece apenas no cabeçalho; cada manifestação tem sua própria linha.
      const meta=i.source.metadados||{};
@@ -538,28 +521,142 @@
   if(next)next.disabled=!total||previewIndex>=total-1;
  }
 
- async function save(){if(busy)return;busy=true;dialog.querySelector('#rf-save').disabled=true;try{
-  if(!state.titulo.trim())throw new Error('Informe um título.');
-  if(!state.items.some(i=>i.incluir))throw new Error('Selecione ao menos uma fotografia.');
-  const items=state.items.map((i,ordem)=>({fotografia_id:i.fotografia_id,ordem,incluir:i.incluir,legenda:i.legenda,observacao:i.observacao,destaque_no_relatorio:i.destaque_no_relatorio,fotos_por_pagina_override:null}));
-  state.id=await check(sb.rpc('pl_salvar_relatorio',{p_id:state.id,p_album_id:state.album.id,p_titulo:state.titulo,p_descricao:state.descricao,p_layout:state.layout,p_items:items}));dirty=false;error({message:'Relatório salvo. O álbum e seus arquivos permanecem intactos.'});
- }catch(e){error(e)}finally{busy=false;const button=dialog.querySelector('#rf-save');if(button)button.disabled=false}}
- async function load(){if(busy)return;if(!(await discard()))return;busy=true;try{
-  const reports=await check(sb.from('relatorios_fotograficos').select('id,titulo').eq('album_id',state.album.id).order('atualizado_em',{ascending:false}));
-  if(!reports.length)throw new Error('Nenhum relatório salvo para este álbum.');
-  dialog.querySelector('.rf-saved-list')?.remove();const list=document.createElement('div');list.className='rf-saved-list';
-  const title=document.createElement('p');title.textContent='Escolha um relatório salvo:';list.append(title);
-  for(const report of reports){const button=document.createElement('button');button.textContent=report.titulo;button.onclick=()=>openSaved(report.id);list.append(button)}
-  dialog.querySelector('.rf-message').after(list);
- }catch(e){error(e)}finally{busy=false}}
- async function openSaved(id){if(busy)return;if(!(await discard()))return;busy=true;try{
-  const report=await check(sb.from('relatorios_fotograficos').select('*').eq('id',id).eq('album_id',state.album.id).single());
-  const items=await check(sb.from('relatorio_fotografias').select('*').eq('relatorio_id',report.id).order('ordem'));
-  const originals=new Map(state.items.map(i=>[i.fotografia_id,i]));
-  if(items.some(i=>!originals.has(i.fotografia_id)))throw new Error('Há fotografias removidas ou inacessíveis no álbum. Revise a fonte antes de abrir este relatório.');
-  const included=new Set(items.map(i=>i.fotografia_id));
-  state.items=items.map(i=>({...originals.get(i.fotografia_id),...i,incluir:!!i.incluir&&originals.get(i.fotografia_id).incluir,destaque_no_relatorio:!!originals.get(i.fotografia_id).source.destaque,fotos_por_pagina_override:null})).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id)).map(i=>({...i,incluir:false,fotos_por_pagina_override:null})));state.id=report.id;state.titulo=report.titulo;state.descricao=report.descricao||'';state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;state.startNumber=1;dirty=false;render();
- }catch(e){error(e)}finally{busy=false}}
+ function resetReport(){
+  state.items=albumBaseline.map(i=>({...i}));
+  sectionOrder=sectionOrderBaseline.map(s=>({...s}));
+  state.id=null;
+  state.titulo='Relatório fotográfico';
+  state.descricao='';
+  state.startNumber=1;
+  showPhotoNotes=true;showManifestations=true;showSectionNames=true;
+  const count=state.items.filter(i=>i.incluir).length;
+  state.layout=count<=2?2:count<=4?4:count<=6?6:count<=9?9:12;
+  dirty=false;
+  render();
+ }
+ async function newReport(){
+  if(busy||reportWritePending||!(await discard()))return;
+  resetReport();
+  error({message:'Novo relatório iniciado com as fotografias originais. Os relatórios salvos permanecem intactos.'});
+ }
+ async function persistReport(id,title){
+  if(busy||reportWritePending)return;
+  busy=true;
+  for(const key of ['#rf-save','#rf-save-as','#rf-load','#rf-new']){
+   const button=dialog.querySelector(key);if(button)button.disabled=true;
+  }
+  try{
+   const clean=String(title||'').trim();
+   if(!clean||clean.length>160)throw new Error('Informe um nome de até 160 caracteres.');
+   if(!state.items.some(i=>i.incluir))throw new Error('Selecione ao menos uma fotografia.');
+   const items=state.items.map((i,ordem)=>({
+    fotografia_id:i.fotografia_id,ordem,incluir:i.incluir,legenda:i.legenda,
+    observacao:i.observacao,destaque_no_relatorio:!!i.destaque_no_relatorio,
+    nivel_anomalia_relatorio:i.nivel_anomalia_relatorio||'',
+    fotos_por_pagina_override:null
+   }));
+   const savedId=await check(sb.rpc('pl_salvar_relatorio_v2',{
+    p_id:id,p_album_id:state.album.id,p_titulo:clean,p_descricao:state.descricao,
+    p_layout:state.layout,p_items:items,p_numero_inicial:state.startNumber,
+    p_mostrar_manifestacoes:showManifestations,p_mostrar_observacoes:showPhotoNotes,
+    p_mostrar_secoes:showSectionNames,p_ordem_secoes:sectionOrder.map(s=>s.id)
+   }));
+   state.id=savedId;state.titulo=clean;dirty=false;
+   const titleField=dialog.querySelector('#rf-title');
+   if(titleField)titleField.value=clean;
+   const active=dialog.querySelector('#rf-current-report');
+   if(active)active.textContent='Editando: '+clean;
+   error({message:'Relatório "'+clean+'" salvo de forma independente. As fotos e os outros relatórios não foram alterados.'});
+  }catch(e){error(e)}
+  finally{
+   busy=false;
+   for(const key of ['#rf-save','#rf-save-as','#rf-load','#rf-new']){
+    const button=dialog.querySelector(key);if(button)button.disabled=false;
+   }
+  }
+ }
+ async function save(){await persistReport(state.id,state.titulo)}
+ async function saveAs(){
+  if(busy||reportWritePending)return;
+  const suggestion=state.titulo==='Relatório fotográfico'?'Relatório — nova finalidade':state.titulo+' — cópia';
+  const title=window.prompt('Nome do novo relatório independente:',suggestion);
+  if(title===null)return;
+  await persistReport(null,title);
+ }
+ async function load(){
+  if(busy||reportWritePending)return;
+  busy=true;
+  try{
+   const reports=await check(sb.from('relatorios_fotograficos')
+    .select('id,titulo,atualizado_em,fotos_por_pagina')
+    .eq('album_id',state.album.id).order('atualizado_em',{ascending:false}));
+   dialog.querySelector('.rf-saved-list')?.remove();
+   const list=document.createElement('div');
+   list.className='rf-saved-list';
+   list.setAttribute('aria-label','Relatórios salvos para este álbum');
+   const header=document.createElement('div');header.className='rf-saved-head';
+   const title=document.createElement('strong');
+   title.textContent='Relatórios deste álbum ('+reports.length+')';
+   const close=document.createElement('button');close.type='button';close.textContent='Fechar lista';
+   close.onclick=()=>list.remove();
+   header.append(title,close);list.append(header);
+   if(!reports.length){
+    const empty=document.createElement('p');empty.textContent='Ainda não há relatórios salvos para este álbum.';list.append(empty);
+   }
+   for(const report of reports){
+    const button=document.createElement('button');
+    button.className='rf-saved-report';button.type='button';
+    const name=document.createElement('strong');name.textContent=report.titulo;
+    const details=document.createElement('span');
+    const date=report.atualizado_em?new Date(report.atualizado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+    details.textContent=(date?'Atualizado em '+date+' · ':'')+report.fotos_por_pagina+' fotos por página';
+    button.append(name,details);
+    button.onclick=()=>openSaved(report.id);
+    list.append(button);
+   }
+   (dialog.querySelector('.rf-report-library')||dialog.querySelector('.rf-message')).after(list);
+  }catch(e){error(e)}
+  finally{busy=false}
+ }
+ async function openSaved(id){
+  if(busy||reportWritePending||!(await discard()))return;
+  busy=true;
+  try{
+   const report=await check(sb.from('relatorios_fotograficos').select('*').eq('id',id).eq('album_id',state.album.id).single());
+   const items=await check(sb.from('relatorio_fotografias').select('*').eq('relatorio_id',report.id).order('ordem'));
+   const originals=new Map(albumBaseline.map(i=>[i.fotografia_id,i]));
+   if(items.some(i=>!originals.has(i.fotografia_id))){
+    throw new Error('Há fotografias removidas ou inacessíveis no álbum. Revise a fonte antes de abrir este relatório.');
+   }
+   const included=new Set(items.map(i=>i.fotografia_id));
+   state.items=items.map(i=>{
+    const origin=originals.get(i.fotografia_id);
+    return {...origin,...i,
+     incluir:!!i.incluir,
+     destaque_no_relatorio:!!i.destaque_no_relatorio,
+     nivel_anomalia_relatorio:i.nivel_anomalia_relatorio===null||i.nivel_anomalia_relatorio===undefined
+      ?(origin.nivel_anomalia_relatorio||''):i.nivel_anomalia_relatorio,
+     fotos_por_pagina_override:null};
+   }).concat([...originals.values()].filter(i=>!included.has(i.fotografia_id))
+      .map(i=>({...i,incluir:false})));
+   state.id=report.id;
+   state.titulo=report.titulo;
+   state.descricao=report.descricao||'';
+   state.layout=core.layouts.includes(report.fotos_por_pagina)?report.fotos_por_pagina:12;
+   state.startNumber=report.numero_inicial||1;
+   showManifestations=report.mostrar_manifestacoes!==false;
+   showPhotoNotes=report.mostrar_observacoes!==false;
+   showSectionNames=report.mostrar_secoes!==false;
+   const order=Array.isArray(report.ordem_secoes)?report.ordem_secoes.map(String):[];
+   const byId=new Map(sectionOrderBaseline.map(s=>[s.id,s]));
+   sectionOrder=[...order.map(id=>byId.get(id)).filter(Boolean),
+    ...sectionOrderBaseline.filter(s=>!order.includes(s.id))].map(s=>({...s}));
+   dirty=false;
+   render();
+   error({message:'Relatório "'+report.titulo+'" aberto para edição. O álbum original permanece intacto.'});
+  }catch(e){error(e)}
+  finally{busy=false}
+ }
  async function exportPDF(light=false){
   if(busy)return;
   busy=true;const generation=revision;let print,restorePage,canvas;const originalIncluded=state.items.map(item=>item.incluir);let exportRange=null;
@@ -734,7 +831,7 @@
  }
  // The existing album remains the source; this adds only a report action.
  const albumContent=document.querySelector('#pl-album-content');
- new MutationObserver(()=>{if(!albumContent.querySelector('.pl-jobhead')||albumContent.querySelector('#rf-create'))return;const button=document.createElement('button');button.id='rf-create';button.className='pl-new-album';button.textContent='Criar PDF';button.onclick=()=>start(albumContent.dataset.albumId);(albumContent.querySelector('.pl-pro-import')||albumContent.querySelector('.pl-jobhead')).append(button)}).observe(albumContent,{childList:true});
+ new MutationObserver(()=>{if(!albumContent.querySelector('.pl-jobhead')||albumContent.querySelector('#rf-create'))return;const button=document.createElement('button');button.id='rf-create';button.className='pl-new-album';button.textContent='Criar relatório';button.onclick=()=>start(albumContent.dataset.albumId);(albumContent.querySelector('.pl-pro-import')||albumContent.querySelector('.pl-jobhead')).append(button)}).observe(albumContent,{childList:true});
  window.PLReports={start};
  // Make the existing Álbuns navigation useful for authorized professional albums.
  document.querySelectorAll('[data-action="Álbuns"]').forEach(button=>button.addEventListener('click',async()=>{
