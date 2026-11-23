@@ -227,7 +227,7 @@
   const marks=dialog.querySelector('#rf-mark-count');
   if(marks)marks.textContent=
    state.items.filter(i=>i.incluir&&i.destaque_no_relatorio).length+' destaques · '+
-   state.items.filter(i=>i.incluir&&i.source.nivel_anomalia).length+' anomalias';
+   state.items.filter(i=>i.incluir&&i.nivel_anomalia_relatorio).length+' anomalias';
  }
  function filteredItems(){
   return state.items.map((item,index)=>({item,index})).filter(({item})=>{
@@ -623,7 +623,14 @@
   busy=true;
   try{
    const report=await check(sb.from('relatorios_fotograficos').select('*').eq('id',id).eq('album_id',state.album.id).single());
-   const items=await check(sb.from('relatorio_fotografias').select('*').eq('relatorio_id',report.id).order('ordem'));
+   // O PostgREST pode limitar cada resposta a 1000 linhas; buscar em lotes sem truncar laudos grandes.
+   const items=[];
+   for(let offset=0;;offset+=500){
+    const batch=await check(sb.from('relatorio_fotografias').select('*')
+     .eq('relatorio_id',report.id).order('ordem').range(offset,offset+499));
+    items.push(...batch);
+    if(batch.length<500)break;
+   }
    const originals=new Map(albumBaseline.map(i=>[i.fotografia_id,i]));
    if(items.some(i=>!originals.has(i.fotografia_id))){
     throw new Error('Há fotografias removidas ou inacessíveis no álbum. Revise a fonte antes de abrir este relatório.');
