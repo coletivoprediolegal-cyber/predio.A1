@@ -331,3 +331,10 @@
  .rf-dialog .rf-report-library .rf-advanced-save button{white-space:normal;font-size:12px}
  .rf-dialog .rf-library-title{align-items:flex-start}
 }
+
+/* Seleção explícita das imagens que entrarão no relatório, distinta do filtro de edição. */
+.rf-dialog .rf-report-selection{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;margin:8px 0;border:1px solid #ded5c8;border-radius:11px;background:#f5f0e8}
+.rf-dialog .rf-report-selection label{display:flex;align-items:center;gap:9px;font:12px 'Instrument Sans',Arial,sans-serif;color:#26354b}
+.rf-dialog .rf-report-selection select{max-width:100%;border:1px solid #d1c5b6;border-radius:8px;background:#fffaf2;color:#26354b;padding:8px;font:12px 'Instrument Sans',Arial,sans-serif}
+.rf-dialog #rf-pdf-selection-hint{font:11px/1.4 'Instrument Sans',Arial,sans-serif;color:#817667}
+@media(max-width:600px){.rf-dialog .rf-report-selection{padding:9px;gap:6px}.rf-dialog .rf-report-selection label{flex-wrap:wrap}}
