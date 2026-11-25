@@ -176,6 +176,7 @@
    '<span class="rf-source-separator">·</span> <span id="rf-mark-count">'+highlights+' destaques · '+anomalies+' anomalias</span></p></div>'+
    '<div class="rf-editor-tools"><label>Fotos por página <select id="rf-layout">'+options(state.layout)+'</select></label>'+ '<label>Iniciar fotos em <input id="rf-start-number" type="number" min="1" max="99999" step="1" inputmode="numeric" value="'+state.startNumber+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ 
    '<label>Exportar da foto <input id="rf-export-from" type="number" min="1" step="1" inputmode="numeric" value="1" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label><label>até <input id="rf-export-to" type="number" min="1" step="1" inputmode="numeric" value="'+total+'" style="width:76px;padding:7px;border:1px solid #d9d1c5;border-radius:8px;background:transparent;color:inherit"></label>'+ '<button type="button" id="rf-pdf" class="rf-primary">Exportar PDF</button><button type="button" id="rf-pdf-light" class="rf-primary">PDF Light</button></div>'+
+   '<div class="rf-report-selection"><label>Fotografias do PDF <select id="rf-pdf-selection" aria-label="Selecionar fotos do PDF"><option value="custom">Seleção atual</option><option value="all">Todas as fotografias</option><option value="highlight">Somente destaques</option><option value="anomaly">Somente anomalias</option></select></label><span id="rf-pdf-selection-hint" aria-live="polite">A seleção atual será usada no PDF.</span></div>'+
    '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-manifestations" '+(showManifestations?'checked':'')+'> Manifestações</label><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
    '<span id="rf-text-hint"></span></div>'+
@@ -201,6 +202,17 @@
   renderSectionOrder();dialog.querySelector('#rf-section-apply').onclick=organizeForPDF;dialog.querySelector('#rf-section-reset').onclick=()=>{restoreAlbumOrder();};
   dialog.querySelector('#rf-layout').onchange=e=>{state.layout=Number(e.target.value);previewIndex=0;dirty=true;preview()};
   dialog.querySelector('#rf-start-number').onchange=e=>{const n=Number(e.target.value);state.startNumber=Number.isSafeInteger(n)&&n>=1&&n<=99999?n:1;e.target.value=state.startNumber;dirty=true;preview();};
+  dialog.querySelector('#rf-pdf-selection').onchange=e=>{
+   const filter=e.target.value;
+   if(filter==='custom')return;
+   const match=item=>filter==='all'||(filter==='highlight'&&!!item.destaque_no_relatorio)||(filter==='anomaly'&&!!item.nivel_anomalia_relatorio);
+   const count=state.items.filter(match).length;
+   if(!count){e.target.value='custom';dialog.querySelector('#rf-pdf-selection-hint').textContent='Nenhuma fotografia corresponde a esse filtro. A seleção foi mantida.';return}
+   state.items.forEach(item=>{item.incluir=match(item)});
+   dirty=true;previewIndex=0;
+   dialog.querySelector('#rf-pdf-selection-hint').textContent=count+' fotografia'+(count===1?' selecionada':'s selecionadas')+' para o PDF.';
+   updateCounts();preview();rows();
+  };
   dialog.querySelector('#rf-pdf').onclick=()=>exportPDF(false);
   dialog.querySelector('#rf-pdf-light').onclick=()=>exportPDF(true);
   dialog.querySelector('#rf-show-manifestations').onchange=e=>{showManifestations=e.target.checked;dirty=true;preview()};
