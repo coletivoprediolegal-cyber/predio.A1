@@ -5,7 +5,7 @@
  const dialog=document.createElement('section');dialog.className='rf-dialog';dialog.hidden=true;dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Relatório fotográfico');document.body.append(dialog);
  let state=null,dirty=false,busy=false,opener=null,revision=0;
  let albumChanged=false,albumBaseline=[],sectionOrderBaseline=[];
- let showPhotoNotes=true,showManifestations=true,showSectionNames=true;let sectionOrder=[],albumItemOrder=[];
+ let showPhotoNotes=true,showManifestations=true,showSectionNames=true,separateSections=true;let sectionOrder=[],albumItemOrder=[];
  const urls=new Set();
  function release(){urls.forEach(u=>URL.revokeObjectURL(u));urls.clear()}
  function error(e){const box=dialog.querySelector('.rf-message');if(box)box.textContent=e.message||String(e)}
@@ -159,7 +159,7 @@
  async function close(){if(busy||reportWritePending)return;if(!(await discard()))return;cancelReportDrag();const changed=albumChanged,albumId=state?.album?.id;dialog.hidden=true;release();state=null;dirty=false;albumChanged=false;document.querySelector('#rf-print')?.remove();if(changed&&albumId)window.dispatchEvent(new CustomEvent('pl:report-album-updated',{detail:{albumId}}));opener?.focus()}
  function options(selected){return core.layouts.map(n=>'<option value="'+n+'" '+(n===selected?'selected':'')+'>'+n+' fotos por página</option>').join('')}
  let previewIndex=0,editFilter='all',editQuery='',editsVisible=30;
- function totalPages(){return core.paginate(state.items,state.layout).length}
+ function totalPages(){return core.paginate(state.items,state.layout,separateSections).length}
  function countIncluded(){return state.items.filter(i=>i.incluir).length}
  function reportNumber(item){const numbers=state.items.map(i=>Number(i.numero)).filter(Number.isFinite);const first=numbers.length?Math.min(...numbers):1;return Math.max(1,Number(state.startNumber)||1)+Number(item.numero)-first}
  function organizeForPDF(){const order=new Map(sectionOrder.map((x,i)=>[x.id,i]));const original=new Map(albumItemOrder.map((id,i)=>[id,i]));state.items.sort((a,b)=>{const ai=a.secao_id?String(a.secao_id):'',bi=b.secao_id?String(b.secao_id):'';const ar=ai?(order.get(ai)??sectionOrder.length):sectionOrder.length+1,br=bi?(order.get(bi)??sectionOrder.length):sectionOrder.length+1;return ar-br||original.get(a.fotografia_id)-original.get(b.fotografia_id)});dirty=true;previewIndex=0;preview();}
@@ -179,6 +179,7 @@
    '<div class="rf-report-selection"><label>Fotografias do PDF <select id="rf-pdf-selection" aria-label="Selecionar fotos do PDF"><option value="custom">Seleção atual</option><option value="all">Todas as fotografias</option><option value="highlight">Somente destaques</option><option value="anomaly">Somente anomalias</option></select></label><span id="rf-pdf-selection-hint" aria-live="polite">A seleção atual será usada no PDF.</span></div>'+
    '<div class="rf-report-visible-options"><label><input type="checkbox" id="rf-show-manifestations" '+(showManifestations?'checked':'')+'> Manifestações</label><label><input type="checkbox" id="rf-show-notes" '+(showPhotoNotes?'checked':'')+'> Observações</label>'+
    '<label><input type="checkbox" id="rf-show-sections" '+(showSectionNames?'checked':'')+'> Seções</label>'+
+   '<label class="rf-break-sections"><input type="checkbox" id="rf-break-sections" '+(separateSections?'checked':'')+'> Iniciar cada seção em nova página</label>'+ 
    '<span id="rf-text-hint"></span></div>'+
    '<p class="rf-message" role="status" aria-live="polite"></p>'+
    (!state.demo?'<section class="rf-report-library" aria-label="Meus relatórios">'+
@@ -218,6 +219,7 @@
   dialog.querySelector('#rf-show-manifestations').onchange=e=>{showManifestations=e.target.checked;dirty=true;preview()};
    dialog.querySelector('#rf-show-notes').onchange=e=>{showPhotoNotes=e.target.checked;dirty=true;preview()};
   dialog.querySelector('#rf-show-sections').onchange=e=>{showSectionNames=e.target.checked;dirty=true;preview()};
+  dialog.querySelector('#rf-break-sections').onchange=e=>{separateSections=e.target.checked;dirty=true;preview()};
   dialog.querySelector('#rf-page-prev').onclick=()=>{previewIndex=Math.max(0,previewIndex-1);preview()};
   dialog.querySelector('#rf-page-next').onclick=()=>{previewIndex=Math.min(totalPages()-1,previewIndex+1);preview()};
   dialog.querySelector('#rf-advanced').addEventListener('toggle',e=>{if(e.target.open)rows()});
@@ -442,7 +444,7 @@
  document.addEventListener('pointerup',e=>{commitReportDrag(e).catch(console.error)});
  document.addEventListener('pointercancel',e=>{commitReportDrag(e,true).catch(console.error)});
  function sheets(previewOnly=false){
-  const pages=core.paginate(state.items,state.layout);
+  const pages=core.paginate(state.items,state.layout,separateSections);
   return pages.map((p,ix)=>{
    if(previewOnly&&ix!==previewIndex)return '';
    const columns=p.size===36?6:p.size===16?4:p.size>=9?3:p.size>=4?2:1;
@@ -540,7 +542,7 @@
   state.titulo='Relatório fotográfico';
   state.descricao='';
   state.startNumber=1;
-  showPhotoNotes=true;showManifestations=true;showSectionNames=true;
+  showPhotoNotes=true;showManifestations=true;showSectionNames=true;separateSections=true;
   const count=state.items.filter(i=>i.incluir).length;
   state.layout=count<=2?2:count<=4?4:count<=6?6:count<=9?9:12;
   dirty=false;
@@ -573,6 +575,7 @@
     p_mostrar_manifestacoes:showManifestations,p_mostrar_observacoes:showPhotoNotes,
     p_mostrar_secoes:showSectionNames,p_ordem_secoes:sectionOrder.map(s=>s.id)
    }));
+   await check(sb.rpc('pl_relatorio_definir_separacao',{p_id:savedId,p_separar:separateSections}));
    state.id=savedId;state.titulo=clean;dirty=false;
    const titleField=dialog.querySelector('#rf-title');
    if(titleField)titleField.value=clean;
@@ -666,6 +669,7 @@
    showManifestations=report.mostrar_manifestacoes!==false;
    showPhotoNotes=report.mostrar_observacoes!==false;
    showSectionNames=report.mostrar_secoes!==false;
+   separateSections=report.separar_secoes!==false;
    const order=Array.isArray(report.ordem_secoes)?report.ordem_secoes.map(String):[];
    const byId=new Map(sectionOrderBaseline.map(s=>[s.id,s]));
    sectionOrder=[...order.map(id=>byId.get(id)).filter(Boolean),
@@ -696,7 +700,7 @@
    // Android browsers can exhaust memory when hundreds of images are retained.
    // Lower raster size on mobile; preserve the A4 layout and all photo numbers.
    const mobilePDF=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-   const reportPages=core.paginate(state.items,state.layout);
+   const reportPages=core.paginate(state.items,state.layout,separateSections);
    const initialPreviewIndex=previewIndex;
    canvas=document.createElement('canvas');
    // A4 at ~210 dpi: legible small print, far less memory than 300 dpi.
