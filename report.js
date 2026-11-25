@@ -75,7 +75,7 @@
   if(busy)return;
   if(!(await discard()))return;
   const generation=++revision;
-  albumChanged=false;
+  albumChanged=false;separateSections=true;
   opener=document.activeElement;dialog.hidden=false;
   dialog.innerHTML='<p>Preparando relatório a partir da organização do álbum…</p>';
   busy=true;release();
